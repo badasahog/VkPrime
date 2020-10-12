@@ -11,5 +11,6 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
     outColor = gl_FragCoord.z * texture(texSamplers[inTexIndex], fragTexCoord);
+    //outColor = vec4(fragTexCoord.x,fragTexCoord.y,1.0,1.0);
     //outColor = vec4(gl_FragCoord.z/gl_FragCoord.w, 1.0, 1.0, 1.0);
 }

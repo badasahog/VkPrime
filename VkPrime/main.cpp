@@ -42,7 +42,7 @@ const uint32_t HEIGHT = 600;
 
 //const std::string MODEL_PATH = "";
 const std::vector<std::string> images = {
-    "textures/ss_0.png",
+    "textures/TXTR_E802C6C6.png",
     "textures/ss_1.png",
     "textures/ss_black.png",
     "textures/ss_blue.png",
@@ -283,6 +283,10 @@ struct CMDLSurface {
     float surfaceNormal[3];
     uint8_t GXFlags;
     uint16_t vertexCount;
+    std::vector<uint32_t> pos_indices;
+    std::vector<uint32_t> nml_indices;
+    std::vector<uint32_t> uvc_indices;
+
 };
 struct CMDLGeometry {
     std::vector<float> vertexCoords;
@@ -412,6 +416,18 @@ private:
     std::vector<VkBuffer> uniformBuffers;
     std::vector<VkDeviceMemory> uniformBuffersMemory;
 
+    VkBuffer posBuffer;
+    VkBuffer nmlBuffer;
+    VkBuffer uvcBuffer;
+    VkBuffer ndxBuffer;
+
+    VkDeviceMemory posBufferMemory;
+    VkDeviceMemory nmlBufferMemory;
+    VkDeviceMemory uvcBufferMemory;
+    VkDeviceMemory ndxBufferMemory;//index buffer
+    VkDeviceSize bufferSize_ndx = 0;
+
+
     std::vector<CMDL> CMDLs;
 
 
@@ -462,9 +478,10 @@ private:
         createTextureImageView();
         createTextureSampler();
         loadScene();
-        createVertexBuffer();
-        createIndexBuffer();
+        //createVertexBuffer();
+        //createIndexBuffer();
         createUniformBuffers();
+        createStorageBuffers();
         createDescriptorPool();
         createDescriptorSets();
         createCommandBuffers();
@@ -872,7 +889,7 @@ private:
         VkDescriptorSetLayoutBinding uboLayoutBinding{};
         uboLayoutBinding.binding = 0;
         uboLayoutBinding.descriptorCount = 1;
-        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         uboLayoutBinding.pImmutableSamplers = nullptr;
         uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
@@ -883,7 +900,38 @@ private:
         samplerLayoutBinding.pImmutableSamplers = nullptr;
         samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-        std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
+        VkDescriptorSetLayoutBinding posLayoutBinding{};
+        posLayoutBinding.binding = 6;
+        posLayoutBinding.descriptorCount = 1;
+        posLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        posLayoutBinding.pImmutableSamplers = nullptr;
+        posLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+        VkDescriptorSetLayoutBinding nmlLayoutBinding{};
+        nmlLayoutBinding.binding = 7;
+        nmlLayoutBinding.descriptorCount = 1;
+        nmlLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        nmlLayoutBinding.pImmutableSamplers = nullptr;
+        nmlLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+        VkDescriptorSetLayoutBinding uvcLayoutBinding{};
+        uvcLayoutBinding.binding = 8;
+        uvcLayoutBinding.descriptorCount = 1;
+        uvcLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        uvcLayoutBinding.pImmutableSamplers = nullptr;
+        uvcLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+        VkDescriptorSetLayoutBinding ndxLayoutBinding{};
+        ndxLayoutBinding.binding = 9;
+        ndxLayoutBinding.descriptorCount = 1;
+        ndxLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        ndxLayoutBinding.pImmutableSamplers = nullptr;
+        ndxLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+
+
+
+        std::array<VkDescriptorSetLayoutBinding, 6> bindings = {uboLayoutBinding, samplerLayoutBinding, posLayoutBinding, nmlLayoutBinding, uvcLayoutBinding, ndxLayoutBinding };
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
@@ -921,8 +969,8 @@ private:
         auto bindingDescription = Vertex::getBindingDescription();
         auto attributeDescriptions = Vertex::getAttributeDescriptions();
 
-        vertexInputInfo.vertexBindingDescriptionCount = 1;
-        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+        vertexInputInfo.vertexBindingDescriptionCount = 0;
+        vertexInputInfo.vertexAttributeDescriptionCount = 0;// static_cast<uint32_t>(attributeDescriptions.size());
         vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
         vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
@@ -1638,17 +1686,17 @@ private:
                         //TODO: read pallettes
                     }
 
-                    if (txtrFormat == 0xa)
-                    {
-                        std::vector<uint8_t> textureChunk;
-                        textureChunk.resize(32);
-                        memcpy(&textureChunk, &rawFile.data()[subGetLoc], 32);
-                        std::vector<uint8_t> imageChunk;
-                        imageChunk.resize(8 * 8);
-
-                        squish::Decompress(&imageChunk.data()[0], &textureChunk.data()[0], txtrFormat);
-
-                    }
+                   // if (txtrFormat == 0xa)
+                   // {
+                   //     std::vector<uint8_t> textureChunk;
+                   //     textureChunk.resize(32);
+                   //     memcpy(&textureChunk, &rawFile.data()[subGetLoc], 32);
+                   //     std::vector<uint8_t> imageChunk;
+                   //     imageChunk.resize(8 * 8);
+                   //
+                   //     //squish::Decompress(&imageChunk.data()[0], &textureChunk.data()[0], txtrFormat);
+                   //
+                   // }
 
                 }
                 else if (fourCC[0] == 'C' && fourCC[1] == 'M' && fourCC[2] == 'D' && fourCC[3] == 'L')
@@ -1924,19 +1972,7 @@ private:
 
                         subGetLoc += sizeof(float);
                     }
-                    Mesh m;
-                    for (int ijk = 0; ijk < CMDLs[cmdlIndex].geometry.vertexCoords.size(); ijk += 3)
-                    {
-                        Vertex v;
-                        v.pos.x = CMDLs[cmdlIndex].geometry.vertexCoords[ijk + 0];
-                        v.pos.y = CMDLs[cmdlIndex].geometry.vertexCoords[ijk + 1];
-                        v.pos.z = CMDLs[cmdlIndex].geometry.vertexCoords[ijk + 2];
-                        v.texCoord.x = 0;
-                        v.texCoord.y = 0;
-                        v.textureIndex = 9;
-                        v.color = { 1.0f, 1.0f, 1.0f };
-                        m.vertices.push_back(v);
-                    }
+                    
 
                     //CMDLs[cmdlIndex].geometry.vertexCoords = std::vector<float>(rawFile.data() + subGetLoc, rawFile.data()+ CMDLs[cmdlIndex].dataSectionSizes[CMDLs[cmdlIndex].MaterialSetCount] - (CMDLs[cmdlIndex].dataSectionSizes[CMDLs[cmdlIndex].MaterialSetCount]) % (sizeof(float) * 3));
 
@@ -1983,7 +2019,7 @@ private:
                     for (int ijk = 0; ijk < CMDLs[cmdlIndex].geometry.floatUVCoords.size(); ijk++)
                     {
                         memcpy(&CMDLs[cmdlIndex].geometry.floatUVCoords[ijk], &rawFile.data()[subGetLoc], sizeof(float));
-                        CMDLs[cmdlIndex].geometry.floatUVCoords[ijk] = swap_endian<float>(CMDLs[cmdlIndex].geometry.floatUVCoords[ijk]);
+                        CMDLs[cmdlIndex].geometry.floatUVCoords[ijk] = swap_endian<float>(CMDLs[cmdlIndex].geometry.floatUVCoords[ijk])/2;
                         subGetLoc += sizeof(float);
                     }
 
@@ -2105,102 +2141,163 @@ private:
                             std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].vertexCount)) << "] vertex count:" << std::dec << CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].vertexCount << std::dec << std::endl;
                             subGetLoc += sizeof(CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].vertexCount);
 
-                            uint16_t index1before = 0;
-                            uint16_t index2before = 0;
-                            uint16_t indexwaybefore = 0;
+                            uint16_t pos_index1before = 0;
+                            uint16_t pos_index2before = 0;
+                            uint16_t pos_indexwaybefore = 0;
+
+                            uint16_t nml_index1before = 0;
+                            uint16_t nml_index2before = 0;
+                            uint16_t nml_indexwaybefore = 0;
+
+                            uint16_t uvc_index1before = 0;
+                            uint16_t uvc_index2before = 0;
+                            uint16_t uvc_indexwaybefore = 0;
                             for (int ijk = 0; ijk < CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].vertexCount; ijk++)
                             {
 
-                                if ((CMDLs[cmdlIndex].materialSets[0/*CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0x3) > 0)
-                                {
-                                    uint16_t vIndex;
-                                    memcpy(&vIndex, &rawFile.data()[subGetLoc], sizeof(vIndex));
-                                    vIndex = swap_endian<uint16_t>(vIndex);
-                                    if (ijk == 0)indexwaybefore = vIndex;
-                                    std::cout << "vertex " << ijk << " position: " <<
-                                        CMDLs[cmdlIndex].geometry.vertexCoords.data()[vIndex * 3 + 0] << ", " <<
-                                        CMDLs[cmdlIndex].geometry.vertexCoords.data()[vIndex * 3 + 1] << ", " <<
-                                        CMDLs[cmdlIndex].geometry.vertexCoords.data()[vIndex * 3 + 2] <<
-                                        std::endl;
-                                    if (((CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].GXFlags & 0xF8) == 0xA0)) {
-                                        if (ijk > 1)
+                                
+                                uint16_t pos_vIndex;
+                                uint16_t nml_vIndex;
+                                uint16_t uvc_vIndex;
+                                
+                                memcpy(&pos_vIndex, &rawFile.data()[subGetLoc], sizeof(pos_vIndex));
+                                pos_vIndex = swap_endian<uint16_t>(pos_vIndex);
+                                subGetLoc += sizeof(pos_vIndex);
+
+                                memcpy(&nml_vIndex, &rawFile.data()[subGetLoc], sizeof(nml_vIndex));
+                                nml_vIndex = swap_endian<uint16_t>(nml_vIndex);
+                                subGetLoc += sizeof(nml_vIndex);
+
+                                memcpy(&uvc_vIndex, &rawFile.data()[subGetLoc], sizeof(uvc_vIndex));
+                                uvc_vIndex = swap_endian<uint16_t>(uvc_vIndex);
+                                subGetLoc += sizeof(uvc_vIndex);
+
+                                if (ijk == 0) {
+                                    pos_indexwaybefore = pos_vIndex;
+                                    nml_indexwaybefore = nml_vIndex;
+                                    uvc_indexwaybefore = uvc_vIndex;
+                                }
+                                //std::cout << "vertex " << ijk << " position: " <<
+                                //    CMDLs[cmdlIndex].geometry.vertexCoords.data()[vIndex * 3 + 0] << ", " <<
+                                //    CMDLs[cmdlIndex].geometry.vertexCoords.data()[vIndex * 3 + 1] << ", " <<
+                                //    CMDLs[cmdlIndex].geometry.vertexCoords.data()[vIndex * 3 + 2] <<
+                                //    std::endl;
+                                if (((CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].GXFlags & 0xF8) == 0xA0)) {
+                                    if (ijk > 1)
+                                    {
+                                        if ((CMDLs[cmdlIndex].materialSets[0/*CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0x3) > 0)
                                         {
-                                            m.indices.push_back(static_cast<uint32_t>(indexwaybefore));
-                                            m.indices.push_back(static_cast<uint32_t>(index1before));
-                                            m.indices.push_back(static_cast<uint32_t>(vIndex));
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].pos_indices.push_back(static_cast<uint32_t>(pos_indexwaybefore));
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].pos_indices.push_back(static_cast<uint32_t>(pos_index1before));
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].pos_indices.push_back(static_cast<uint32_t>(pos_vIndex));
+                                        }
+                                        if ((CMDLs[cmdlIndex].materialSets[0/*CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0xC) > 0)
+                                        {
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].nml_indices.push_back(static_cast<uint32_t>(nml_indexwaybefore));
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].nml_indices.push_back(static_cast<uint32_t>(nml_index1before));
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].nml_indices.push_back(static_cast<uint32_t>(nml_vIndex));
+                                        }
+                                        if ((CMDLs[cmdlIndex].materialSets.data()[0/*CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0x300) > 0)
+                                        {
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_indexwaybefore));
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_index1before));
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_vIndex));
                                         }
                                     }
-                                    else
-                                        if (((CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].GXFlags & 0xF8) == 0x90))
-                                        {
-                                            if (ijk > 1 && (ijk + 1) % 3 == 0) {
-                                                m.indices.push_back(static_cast<uint32_t>(vIndex));
-                                                m.indices.push_back(static_cast<uint32_t>(index1before));
-                                                m.indices.push_back(static_cast<uint32_t>(index2before));
-                                            }
-                                        }
-                                        else if (((CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].GXFlags & 0xF8) == 0x98))
-                                        {
-                                            if (ijk > 1) {
-                                                m.indices.push_back(static_cast<uint32_t>(vIndex));
-                                                m.indices.push_back(static_cast<uint32_t>(index1before));
-                                                m.indices.push_back(static_cast<uint32_t>(index2before));
-                                            }
-                                        }
-                                        else
-                                        {
-                                            std::cout << "unsupported primitive" << std::endl;
-                                        }
-                                    index2before = index1before;
-                                    index1before = vIndex;
-
-                                    subGetLoc += sizeof(vIndex);
                                 }
-                                if ((CMDLs[cmdlIndex].materialSets[0/*CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0xC) > 0)
+                                else if (((CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].GXFlags & 0xF8) == 0x90))
                                 {
-                                    uint16_t vIndex;
-                                    memcpy(&vIndex, &rawFile.data()[subGetLoc], sizeof(vIndex));
-                                    vIndex = swap_endian<uint16_t>(vIndex);
-                                    std::cout << "vertex " << ijk << " normal: " <<
-                                        CMDLs[cmdlIndex].geometry.normals.data()[vIndex * 3 + 0] << ", " <<
-                                        CMDLs[cmdlIndex].geometry.normals.data()[vIndex * 3 + 1] << ", " <<
-                                        CMDLs[cmdlIndex].geometry.normals.data()[vIndex * 3 + 2] <<
-                                        std::endl;
-                                    subGetLoc += sizeof(vIndex);
+                                    if (ijk > 1 && (ijk + 1) % 3 == 0) {
+                                        if ((CMDLs[cmdlIndex].materialSets[0/*CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0x3) > 0)
+                                        {
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].pos_indices.push_back(static_cast<uint32_t>(pos_index1before));
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].pos_indices.push_back(static_cast<uint32_t>(pos_index2before));
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].pos_indices.push_back(static_cast<uint32_t>(pos_vIndex));
+                                        }
+                                        if ((CMDLs[cmdlIndex].materialSets[0/*CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0xC) > 0)
+                                        {
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].nml_indices.push_back(static_cast<uint32_t>(nml_index1before));
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].nml_indices.push_back(static_cast<uint32_t>(nml_index2before));
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].nml_indices.push_back(static_cast<uint32_t>(nml_vIndex));
+                                        }
+                                        if ((CMDLs[cmdlIndex].materialSets.data()[0/*CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0x300) > 0)
+                                        {
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_index1before));
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_index2before));
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_vIndex));
+                                        }
+                                    }
+                                }
+                                else if (((CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].GXFlags & 0xF8) == 0x98))
+                                {
+                                    if (ijk > 1) {
+                                        if ((CMDLs[cmdlIndex].materialSets[0/*CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0x3) > 0)
+                                        {
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].pos_indices.push_back(static_cast<uint32_t>(pos_index2before));
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].pos_indices.push_back(static_cast<uint32_t>(pos_index1before));
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].pos_indices.push_back(static_cast<uint32_t>(pos_vIndex));
+                                        }
+                                        if ((CMDLs[cmdlIndex].materialSets[0/*CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0xC) > 0)
+                                        {
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].nml_indices.push_back(static_cast<uint32_t>(nml_index2before));
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].nml_indices.push_back(static_cast<uint32_t>(nml_index1before));
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].nml_indices.push_back(static_cast<uint32_t>(nml_vIndex));
+                                        }
+                                        if ((CMDLs[cmdlIndex].materialSets.data()[0/*CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0x300) > 0)
+                                        {
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_index2before));
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_index1before));
+                                            CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_vIndex));
+                                        }
+                                    }
                                 }
                                 else
                                 {
-
-                                    std::cout << "normals are not present" << std::endl;
-                                    std::cout << std::hex << CMDLs[cmdlIndex].materialSets[CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags << std::dec << std::endl;
+                                    std::cout << "unsupported primitive" << std::endl;
                                 }
+                                pos_index2before = pos_index1before;
+                                pos_index1before = pos_vIndex;
 
-
-                                //todo: color inputs
-
-
-                                if ((CMDLs[cmdlIndex].materialSets.data()[0/*CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0x300) > 0)
-                                {
-                                    uint16_t vIndex;
-                                    memcpy(&vIndex, &rawFile.data()[subGetLoc], sizeof(vIndex));
-                                    vIndex = swap_endian<uint16_t>(vIndex);
-                                    std::cout << "vertex " << ijk << " UV: " <<
-                                        CMDLs[cmdlIndex].geometry.floatUVCoords.data()[vIndex * 2 + 0] << ", " <<
-                                        CMDLs[cmdlIndex].geometry.floatUVCoords.data()[vIndex * 2 + 1] <<
-                                        std::endl;
-                                    subGetLoc += sizeof(vIndex);
-                                }
-                                if ((CMDLs[cmdlIndex].materialSets.data()[0/*CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0xC00) > 0)
-                                {
-                                    uint16_t vIndex;
-                                    memcpy(&vIndex, &rawFile.data()[subGetLoc], sizeof(vIndex));
-                                    vIndex = swap_endian<uint16_t>(vIndex);
-                                    std::cout << "vertex " << ijk << " UV: " <<
-                                        CMDLs[cmdlIndex].geometry.floatUVCoords.data()[vIndex * 2 + 0] << ", " <<
-                                        CMDLs[cmdlIndex].geometry.floatUVCoords.data()[vIndex * 2 + 1] <<
-                                        std::endl;
-                                    subGetLoc += sizeof(vIndex);
-                                }
+                                
+                                //if ((CMDLs[cmdlIndex].materialSets[0/*CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0xC) > 0)
+                                //{
+                                //    uint16_t vIndex;
+                                //    memcpy(&vIndex, &rawFile.data()[subGetLoc], sizeof(vIndex));
+                                //    vIndex = swap_endian<uint16_t>(vIndex);
+                                //    std::cout << "vertex " << ijk << " normal: " <<
+                                //        CMDLs[cmdlIndex].geometry.normals.data()[vIndex * 3 + 0] << ", " <<
+                                //        CMDLs[cmdlIndex].geometry.normals.data()[vIndex * 3 + 1] << ", " <<
+                                //        CMDLs[cmdlIndex].geometry.normals.data()[vIndex * 3 + 2] <<
+                                //        std::endl;
+                                //    subGetLoc += sizeof(vIndex);
+                                //}
+                                //
+                                //
+                                ////todo: color inputs
+                                //
+                                //
+                                //if ((CMDLs[cmdlIndex].materialSets.data()[0/*CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0x300) > 0)
+                                //{
+                                //    uint16_t vIndex;
+                                //    memcpy(&vIndex, &rawFile.data()[subGetLoc], sizeof(vIndex));
+                                //    vIndex = swap_endian<uint16_t>(vIndex);
+                                //    std::cout << "vertex " << ijk << " UV: " <<
+                                //        CMDLs[cmdlIndex].geometry.floatUVCoords.data()[vIndex * 2 + 0] << ", " <<
+                                //        CMDLs[cmdlIndex].geometry.floatUVCoords.data()[vIndex * 2 + 1] <<
+                                //        std::endl;
+                                //    subGetLoc += sizeof(vIndex);
+                                //}
+                                //if ((CMDLs[cmdlIndex].materialSets.data()[0/*CMDLs[cmdlIndex].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0xC00) > 0)
+                                //{
+                                //    uint16_t vIndex;
+                                //    memcpy(&vIndex, &rawFile.data()[subGetLoc], sizeof(vIndex));
+                                //    vIndex = swap_endian<uint16_t>(vIndex);
+                                //    std::cout << "vertex " << ijk << " UV: " <<
+                                //        CMDLs[cmdlIndex].geometry.floatUVCoords.data()[vIndex * 2 + 0] << ", " <<
+                                //        CMDLs[cmdlIndex].geometry.floatUVCoords.data()[vIndex * 2 + 1] <<
+                                //        std::endl;
+                                //    subGetLoc += sizeof(vIndex);
+                                //}
                                 //
 
 
@@ -2240,14 +2337,14 @@ private:
 
                     }
 
-                    m.startIndex = indices.size();
-                    m.vertOffset = vertices.size();
-
-                    vertices.insert(vertices.end(), m.vertices.begin(), m.vertices.end());
-                    indices.insert(indices.end(), m.indices.begin(), m.indices.end());
-
-                    m.num_indices = indices.size() - m.startIndex;
-                    objects.push_back(m);
+                    //m.startIndex = indices.size();
+                    //m.vertOffset = vertices.size();
+                    //
+                    //vertices.insert(vertices.end(), m.vertices.begin(), m.vertices.end());
+                    //indices.insert(indices.end(), m.indices.begin(), m.indices.end());
+                    //
+                    //m.num_indices = indices.size() - m.startIndex;
+                    //objects.push_back(m);
 
                     //TODO: temporary:
                     //return;
@@ -2509,16 +2606,70 @@ private:
         uniformBuffersMemory.resize(swapChainImages.size());
 
         for (size_t i = 0; i < swapChainImages.size(); i++) {
-            createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
+            createBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
         }
     }
 
+    void createStorageBuffers() {
+
+        VkDeviceSize bufferSize_pos = CMDLs.data()[0].geometry.vertexCoords.size() * sizeof(float);
+        VkDeviceSize bufferSize_nml = CMDLs.data()[0].geometry.normals.size() * sizeof(float);
+        VkDeviceSize bufferSize_uvc = CMDLs.data()[0].geometry.floatUVCoords.size() * sizeof(float);
+
+        for (int i = 0; i < CMDLs[0].geometry.surfaceCount; i++)
+        {
+            bufferSize_ndx += CMDLs[0].geometry.surfaces[i].pos_indices.size() * sizeof(uint32_t);
+            bufferSize_ndx += CMDLs[0].geometry.surfaces[i].nml_indices.size() * sizeof(uint32_t);
+            bufferSize_ndx += CMDLs[0].geometry.surfaces[i].uvc_indices.size() * sizeof(uint32_t);
+        }
+
+        createBuffer(bufferSize_pos, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, posBuffer, posBufferMemory);
+        createBuffer(bufferSize_nml, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, nmlBuffer, nmlBufferMemory);
+        createBuffer(bufferSize_uvc, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uvcBuffer, uvcBufferMemory);
+        createBuffer(bufferSize_ndx, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, ndxBuffer, ndxBufferMemory);
+    
+        void* data;
+
+        vkMapMemory(device, posBufferMemory, 0, bufferSize_pos, 0, &data);
+        memcpy(data, CMDLs.data()[0].geometry.vertexCoords.data(), bufferSize_pos);
+        vkUnmapMemory(device, posBufferMemory);
+
+        vkMapMemory(device, nmlBufferMemory, 0, bufferSize_nml, 0, &data);
+        memcpy(data, CMDLs.data()[0].geometry.normals.data(), bufferSize_nml);
+        vkUnmapMemory(device, nmlBufferMemory);
+
+        vkMapMemory(device, uvcBufferMemory, 0, bufferSize_uvc, 0, &data);
+        memcpy(data, CMDLs.data()[0].geometry.floatUVCoords.data(), bufferSize_uvc);
+        vkUnmapMemory(device, uvcBufferMemory);
+
+        
+        uint32_t* data2;
+
+        vkMapMemory(device, ndxBufferMemory, 0, bufferSize_ndx, 0, (void**)&data2);
+        for (int i = 0; i < CMDLs[0].geometry.surfaceCount; i++)
+        {
+            for (int j = 0; j < CMDLs[0].geometry.surfaces[i].pos_indices.size(); j++) {
+                *data2 = CMDLs.data()[0].geometry.surfaces[i].pos_indices[j];
+                data2++;
+                *data2 = CMDLs.data()[0].geometry.surfaces[i].nml_indices[j];
+                data2++;
+                *data2 = CMDLs.data()[0].geometry.surfaces[i].uvc_indices[j];
+                data2++;
+
+            }
+        }
+
+        vkUnmapMemory(device, ndxBufferMemory);
+    
+    }
     void createDescriptorPool() {
-        std::array<VkDescriptorPoolSize, 2> poolSizes{};
-        poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        std::array<VkDescriptorPoolSize, 3> poolSizes{};
+        poolSizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
         poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChainImages.size() * images.size());
+        poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        poolSizes[2].descriptorCount = 4*static_cast<uint32_t>(swapChainImages.size());
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -2543,6 +2694,23 @@ private:
         if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate descriptor sets!");
         }
+        VkDescriptorBufferInfo posBufferInfo{};
+        posBufferInfo.buffer = posBuffer;
+        posBufferInfo.offset = 0;
+        posBufferInfo.range = VK_WHOLE_SIZE;
+        VkDescriptorBufferInfo nmlBufferInfo{};
+        nmlBufferInfo.buffer = nmlBuffer;
+        nmlBufferInfo.offset = 0;
+        nmlBufferInfo.range = VK_WHOLE_SIZE; 
+        VkDescriptorBufferInfo uvcBufferInfo{};
+        uvcBufferInfo.buffer = uvcBuffer;
+        uvcBufferInfo.offset = 0;
+        uvcBufferInfo.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo ndxBufferInfo{};
+        ndxBufferInfo.buffer = ndxBuffer;
+        ndxBufferInfo.offset = 0;
+        ndxBufferInfo.range = VK_WHOLE_SIZE;
 
         for (size_t i = 0; i < swapChainImages.size(); i++) {
             VkDescriptorBufferInfo bufferInfo{};
@@ -2560,13 +2728,13 @@ private:
             }
 
 
-            std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+            std::array<VkWriteDescriptorSet, 6> descriptorWrites{};
 
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].dstSet = descriptorSets[i];
             descriptorWrites[0].dstBinding = 0;
             descriptorWrites[0].dstArrayElement = 0;
-            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             descriptorWrites[0].descriptorCount = 1;
             descriptorWrites[0].pBufferInfo = &bufferInfo;
 
@@ -2577,6 +2745,41 @@ private:
             descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             descriptorWrites[1].descriptorCount = images.size();
             descriptorWrites[1].pImageInfo = &imageInfo[0];
+
+            descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[2].dstSet = descriptorSets[i];
+            descriptorWrites[2].dstBinding = 6;
+            descriptorWrites[2].dstArrayElement = 0;
+            descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrites[2].descriptorCount = 1;
+            descriptorWrites[2].pBufferInfo = &posBufferInfo;
+
+            descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[3].dstSet = descriptorSets[i];
+            descriptorWrites[3].dstBinding = 7;
+            descriptorWrites[3].dstArrayElement = 0;
+            descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrites[3].descriptorCount = 1;
+            descriptorWrites[3].pBufferInfo = &nmlBufferInfo;
+
+            descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[4].dstSet = descriptorSets[i];
+            descriptorWrites[4].dstBinding = 8;
+            descriptorWrites[4].dstArrayElement = 0;
+            descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrites[4].descriptorCount = 1;
+            descriptorWrites[4].pBufferInfo = &uvcBufferInfo;
+
+            descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[5].dstSet = descriptorSets[i];
+            descriptorWrites[5].dstBinding = 9;
+            descriptorWrites[5].dstArrayElement = 0;
+            descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrites[5].descriptorCount = 1;
+            descriptorWrites[5].pBufferInfo = &ndxBufferInfo;
+
+
+
 
 
             vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
@@ -2706,30 +2909,32 @@ private:
 
             VkBuffer vertexBuffers[] = { vertexBuffer };
             VkDeviceSize offsets[] = { 0 };
-            vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
+            //vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
 
-            vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+            //vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
             vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
             uint32_t offset__ = 0;
-            for (int j = 0; j < objects.size(); j++)
-            {
-                /*
-                commandBuffer,
-                indexCount,
-                instanceCount,
-                firstIndex,
-                vertexOffset,
-                firstInstance
-                */
-                vkCmdDrawIndexed(commandBuffers[i],
-                    static_cast<uint32_t>(objects[j].num_indices),
-                    1,
-                    static_cast<uint32_t>(objects[j].startIndex),
-                    static_cast<uint32_t>(objects[j].vertOffset),
-                    0);
-                offset__ += (objects[j].num_indices);
-            }
+            //for (int j = 0; j < objects.size(); j++)
+            //{
+            //    /*
+            //    commandBuffer,
+            //    indexCount,
+            //    instanceCount,
+            //    firstIndex,
+            //    vertexOffset,
+            //    firstInstance
+            //    */
+            //    vkCmdDrawIndexed(commandBuffers[i],
+            //        static_cast<uint32_t>(objects[j].num_indices),
+            //        1,
+            //        static_cast<uint32_t>(objects[j].startIndex),
+            //        static_cast<uint32_t>(objects[j].vertOffset),
+            //        0);
+            //    offset__ += (objects[j].num_indices);
+            //}
+            vkCmdDraw(commandBuffers[i], bufferSize_ndx/sizeof(uint32_t),1,0,0);
+            
             vkCmdEndRenderPass(commandBuffers[i]);
 
             if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS) {
