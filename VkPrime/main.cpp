@@ -41,7 +41,8 @@ typedef uint32_t PrimeAssetID;
 
 //const std::string MODEL_PATH = "";
 const std::vector<std::string> images = {
-    "textures/TXTR_E802C6C6.png",
+    //"textures/TXTR_E802C6C6.png",
+    "textures/TXTR_6518F07A.png",
     //"textures/ss_1.png",
     //"textures/ss_black.png",
     //"textures/ss_blue.png",
@@ -1788,7 +1789,7 @@ private:
                    // }
 
                 }
-                else if (fourCC[0] == 'C' && fourCC[1] == 'M' && fourCC[2] == 'D' && fourCC[3] == 'L')
+                else if (fourCC[0] == 'C' && fourCC[1] == 'M' && fourCC[2] == 'D' && fourCC[3] == 'L' && tempcounter==0)
                 {
                     
                     //std::cout << "model found!" << std::endl;
@@ -2245,28 +2246,45 @@ private:
                                 
                                 uint16_t pos_vIndex;
                                 uint16_t nml_vIndex;
-                                uint16_t uvc_vIndex;
-                                
-                                memcpy(&pos_vIndex, &rawFile.data()[subGetLoc], sizeof(pos_vIndex));
-                                pos_vIndex = swap_endian<uint16_t>(pos_vIndex);
-                                subGetLoc += sizeof(pos_vIndex);
+                                uint16_t uvc1_vIndex;
+                                uint16_t uvc2_vIndex;
+                                uint16_t uvc3_vIndex;
+                                uint16_t uvc4_vIndex;
+                                uint16_t uvc5_vIndex;
+                                uint16_t uvc6_vIndex;
+                                uint16_t uvc7_vIndex;
 
-                                memcpy(&nml_vIndex, &rawFile.data()[subGetLoc], sizeof(nml_vIndex));
-                                nml_vIndex = swap_endian<uint16_t>(nml_vIndex);
-                                subGetLoc += sizeof(nml_vIndex);
 
-                                memcpy(&uvc_vIndex, &rawFile.data()[subGetLoc], sizeof(uvc_vIndex));
-                                uvc_vIndex = swap_endian<uint16_t>(uvc_vIndex);
-                                subGetLoc += sizeof(uvc_vIndex);
 
-                                //memcpy(&uvc_vIndex, &rawFile.data()[subGetLoc], sizeof(uvc_vIndex));
-                                //uvc_vIndex = swap_endian<uint16_t>(uvc_vIndex);
-                                //subGetLoc += sizeof(uvc_vIndex);
-
+                                if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x3) > 0) {
+                                    memcpy(&pos_vIndex, &rawFile.data()[subGetLoc], sizeof(pos_vIndex));
+                                    pos_vIndex = swap_endian<uint16_t>(pos_vIndex);
+                                    subGetLoc += sizeof(pos_vIndex);
+                                }
+                                else
+                                {
+                                    std::cout << "epic failure" << std::endl;
+                                }
+                                if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0xC) > 0) {
+                                    memcpy(&nml_vIndex, &rawFile.data()[subGetLoc], sizeof(nml_vIndex));
+                                    nml_vIndex = swap_endian<uint16_t>(nml_vIndex);
+                                    subGetLoc += sizeof(nml_vIndex);
+                                }
+                                if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x300) > 0) {
+                                    memcpy(&uvc1_vIndex, &rawFile.data()[subGetLoc], sizeof(uvc1_vIndex));
+                                    uvc1_vIndex = swap_endian<uint16_t>(uvc1_vIndex);
+                                    subGetLoc += sizeof(uvc1_vIndex);
+                                }
+                                if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0xC00) > 0)
+                                {
+                                    memcpy(&uvc2_vIndex, &rawFile.data()[subGetLoc], sizeof(uvc2_vIndex));
+                                    uvc2_vIndex = swap_endian<uint16_t>(uvc2_vIndex);
+                                    subGetLoc += sizeof(uvc2_vIndex);
+                                }
                                 if (ijk == 0) {
                                     pos_indexwaybefore = pos_vIndex;
                                     nml_indexwaybefore = nml_vIndex;
-                                    uvc_indexwaybefore = uvc_vIndex;
+                                    uvc_indexwaybefore = uvc1_vIndex;
                                 }
                                 //std::cout << "vertex " << ijk << " position: " <<
                                 //    CMDLMap[AssetID].geometry.vertexCoords.data()[vIndex * 3 + 0] << ", " <<
@@ -2292,7 +2310,7 @@ private:
                                         {
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_indexwaybefore));
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_index1before));
-                                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_vIndex));
+                                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc1_vIndex));
                                         }
                                     }
                                 }
@@ -2315,7 +2333,7 @@ private:
                                         {
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_index1before));
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_index2before));
-                                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_vIndex));
+                                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc1_vIndex));
                                         }
                                     }
                                 }
@@ -2338,7 +2356,7 @@ private:
                                         {
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_index2before));
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_index1before));
-                                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_vIndex));
+                                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc1_vIndex));
                                         }
 
                                     }
@@ -2351,9 +2369,9 @@ private:
                                 pos_index1before = pos_vIndex;
 
                                 
-                                //if ((CMDLMap[AssetID].materialSets[0/*CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0xC) > 0)
+                                //if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0xC) > 0)
                                 //{
-                                //    uint16_t vIndex;
+                                //    uint16_t vIndex;variable 'pos_vIndex' is being used
                                 //    memcpy(&vIndex, &rawFile.data()[subGetLoc], sizeof(vIndex));
                                 //    vIndex = swap_endian<uint16_t>(vIndex);
                                 //    std::cout << "vertex " << ijk << " normal: " <<
@@ -2523,7 +2541,7 @@ private:
     }
     void loadScene()
     {
-        loadPak("Metroid2.pak");
+        loadPak("Metroid7.pak");
         //std::ifstream f(LEVEL_PATH);
         //if (!f.is_open())
         //    throw std::invalid_argument("level data not found");
