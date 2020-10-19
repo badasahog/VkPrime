@@ -14,8 +14,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#define TINYOBJLOADER_IMPLEMENTATION
-#include <tiny_obj_loader.h>
 #include <intrin.h>
 #include <iostream>
 #include <fstream>
@@ -32,9 +30,7 @@
 #include <unordered_map>
 #include <strstream>
 #include <bitset>
-#include <unordered_map> 
-
-#include<squish.cpp>
+#include <unordered_map>
 
 #include <zlib.h>
 #define CHUNK 16384
@@ -46,62 +42,63 @@ typedef uint32_t PrimeAssetID;
 //const std::string MODEL_PATH = "";
 const std::vector<std::string> images = {
     "textures/TXTR_E802C6C6.png",
-    "textures/ss_1.png",
-    "textures/ss_black.png",
-    "textures/ss_blue.png",
-    "textures/ss_blue_green.png",
-    "textures/ss_canopy.png",
-    "textures/ss_dark_blue.png",
-    "textures/ss_dark_red.png",
-    "textures/ss_glass.png",
-    "textures/ss_green.png",
-    "textures/ss_grey.png",
-    "textures/ss_lgb.png",
-    "textures/ss_light_blue.png",
-    "textures/ss_light_green.png",
-    "textures/ss_meter_G.png",
-    "textures/ss_meter_O.png",
-    "textures/ss_meter_Y.png",
-    "textures/ss_outer_light_blue.png",
-    "textures/ss_pbh.png",
-    "textures/ss_red.png",
-    "textures/ss_red_orange.png",
-    "textures/ss_ship_interior.png",
-    "textures/ss_ship_seat.png",
-    "textures/ss_ship_wheel.png",
-    "textures/ss_vanilla.png",
-    "textures/ss_vanilla.png.001.png",
-    "textures/ss_yellow.png",
-    "textures/ss_yro.png",
-    "textures/strip_1.png",
-    "textures/strip_2.png",
-    "textures/strip_3.png",
-    "textures/strip_4.png",
-    "textures/strip_5.png",
-    "textures/strip_6.png",
-    "textures/strip_7.png",
-    "textures/ss_0.png",
-    "textures/ss_1.png",
-    "textures/ss_0.png",
-    "textures/ss_1.png",
-    "textures/ss_0.png",
-    "textures/ss_1.png",
-    "textures/ss_0.png",
-    "textures/ss_1.png",
-    "textures/ss_0.png",
-    "textures/ss_1.png",
-    "textures/ss_0.png",
-    "textures/ss_1.png",
-    "textures/ss_0.png",
-    "textures/ss_1.png",
-    "textures/ss_0.png",
-    "textures/ss_1.png",
-    "textures/ss_0.png",
-    "textures/ss_1.png",
-    "textures/ss_0.png",
-    "textures/ss_1.png",
+    //"textures/ss_1.png",
+    //"textures/ss_black.png",
+    //"textures/ss_blue.png",
+    //"textures/ss_blue_green.png",
+    //"textures/ss_canopy.png",
+    //"textures/ss_dark_blue.png",
+    //"textures/ss_dark_red.png",
+    //"textures/ss_glass.png",
+    //"textures/ss_green.png",
+    //"textures/ss_grey.png",
+    //"textures/ss_lgb.png",
+    //"textures/ss_light_blue.png",
+    //"textures/ss_light_green.png",
+    //"textures/ss_meter_G.png",
+    //"textures/ss_meter_O.png",
+    //"textures/ss_meter_Y.png",
+    //"textures/ss_outer_light_blue.png",
+    //"textures/ss_pbh.png",
+    //"textures/ss_red.png",
+    //"textures/ss_red_orange.png",
+    //"textures/ss_ship_interior.png",
+    //"textures/ss_ship_seat.png",
+    //"textures/ss_ship_wheel.png",
+    //"textures/ss_vanilla.png",
+    //"textures/ss_vanilla.png.001.png",
+    //"textures/ss_yellow.png",
+    //"textures/ss_yro.png",
+    //"textures/strip_1.png",
+    //"textures/strip_2.png",
+    //"textures/strip_3.png",
+    //"textures/strip_4.png",
+    //"textures/strip_5.png",
+    //"textures/strip_6.png",
+    //"textures/strip_7.png",
+    //"textures/ss_0.png",
+    //"textures/ss_1.png",
+    //"textures/ss_0.png",
+    //"textures/ss_1.png",
+    //"textures/ss_0.png",
+    //"textures/ss_1.png",
+    //"textures/ss_0.png",
+    //"textures/ss_1.png",
+    //"textures/ss_0.png",
+    //"textures/ss_1.png",
+    //"textures/ss_0.png",
+    //"textures/ss_1.png",
+    //"textures/ss_0.png",
+    //"textures/ss_1.png",
+    //"textures/ss_0.png",
+    //"textures/ss_1.png",
+    //"textures/ss_0.png",
+    //"textures/ss_1.png",
+    //"textures/ss_0.png",
+    //"textures/ss_1.png",
 };
-const std::string LEVEL_PATH = "models/ssdolphin/lvl.dat";
+
+//const std::string LEVEL_PATH = "models/ssdolphin/lvl.dat";
 
 
 
@@ -339,8 +336,7 @@ struct MLVL {
     uint32_t garbage5;
     std::vector<uint32_t> areaLayerNameOffsetArray;
 };
-
-struct MaterialSet {
+struct Material {
     std::vector<PrimeAssetID> textureFileIDs;
     std::vector<uint32_t> materialEndOffsets;
     std::vector<uint32_t> textureFileIndices;
@@ -351,10 +347,19 @@ struct MaterialSet {
     uint32_t vertexAtributeFlags;
     uint32_t ColorChannelCount;
 };
+
+struct MaterialSet {
+    uint32_t textureCount;
+    std::vector<uint32_t> textureFileIDs;
+    uint32_t materialCount;
+    std::vector<uint32_t> materialEndOffsets;
+    std::vector<Material> materials;
+};
+
 struct CMDLSurface {
     float centerPoint[3];
     uint32_t matIndex;
-    uint16_t maintissa;
+    uint16_t mantissa;
     uint16_t displayListSize;
     uint32_t parentModelPointer;
     uint32_t nextSurfacePointer;
@@ -1685,7 +1690,7 @@ private:
             std::cout << "\tAsset ID                " << std::hex << AssetID << std::dec << std::endl;
             std::cout << "\tsize                    " << size << std::endl;
             std::cout << "\toffset                  " << std::hex << offset << std::dec << std::endl;
-            int getLoc = f.tellg();
+            uint64_t getLoc = f.tellg();
             f.seekg(offset);
             if (compressionFlag == 1)
             {
@@ -1706,7 +1711,7 @@ private:
 
                 switch (uncompress((Bytef*)rawFile.data(), &ucompSize, (Bytef*)zlibdata.data(), size))
                 {
-#ifdef debug
+#ifndef NDEBUG
                 case Z_OK:std::cout << "successfully extracted" << std::endl; break;
 #endif
                 case Z_STREAM_END:std::cout << "FATAL ERROR Z_STREAM_END" << std::endl; break;
@@ -1729,9 +1734,13 @@ private:
                     int32_t mipCount = (rawFile[8] << 24) | (rawFile[9] << 16) | (rawFile[10] << 8) | rawFile[11];
                     //std::cout << "\t\tmip count: " << mipCount << std::endl;
                 }
+                else if (fourCC[0] == 'M' && fourCC[1] == 'L' && fourCC[2] == 'V' && fourCC[3] == 'L')
+                {
+                    std::cout << "mlevel found****************************************" << std::endl;
+                }
                 else if (fourCC[0] == 'T' && fourCC[1] == 'X' && fourCC[2] == 'T' && fourCC[3] == 'R')
                 {
-                    uint32_t subGetLoc = 0;
+                    uint64_t subGetLoc = 0;
 
                     uint32_t txtrFormat;
 
@@ -1782,18 +1791,20 @@ private:
                 else if (fourCC[0] == 'C' && fourCC[1] == 'M' && fourCC[2] == 'D' && fourCC[3] == 'L')
                 {
                     
-                    std::cout << "model found!" << std::endl;
+                    //std::cout << "model found!" << std::endl;
                     //int32_t magic = (rawFile[3] << 24) | (rawFile[2] << 16) | (rawFile[1] << 8) | rawFile[0];
                     //std::cout << "\t\tmagic: " << std::hex << magic << std::dec << std::endl;
-                    std::cout << "\tAsset ID                " << std::hex << AssetID << std::dec << std::endl;
+                    //std::cout << "\tAsset ID                " << std::hex << AssetID << std::dec << std::endl;
                     //for (int jfiels = 0; jfiels < 50; jfiels+=2)
                     //{
                     //    std::cout << std::hex << ((rawFile[jfiels] << 8) | rawFile[jfiels+1]) << std::dec;
                     //}std::cout << std::endl;
                     //dumpToFile("dump.cmdl", rawFile.data(),rawFile.size());
                     //std::cout << hex(rawFile[0]) << hex(rawFile[1]) << hex(rawFile[2]) << hex(rawFile[3]) << std::endl;
-
-                    uint32_t subGetLoc = 0;
+                    if (tempcounter > 0)
+                        continue;
+                    tempcounter++;
+                    uint64_t subGetLoc = 0;
 
                     //CMDLs.resize(CMDLs.size() + 1);
 
@@ -1801,9 +1812,7 @@ private:
                     memcpy(&CMDLMap[AssetID].magic, &rawFile.data()[subGetLoc], sizeof(CMDLMap[AssetID].magic));
                     CMDLMap[AssetID].magic = swap_endian<int32_t>(CMDLMap[AssetID].magic);
                     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].magic)) << "] magic:" << CMDLMap[AssetID].magic << std::dec << std::endl;
-                    if (tempcounter > 0)
-                        continue;
-                    tempcounter++;
+                    
                     subGetLoc += sizeof(CMDLMap[AssetID].magic);
                     tempID = AssetID;
 
@@ -1894,137 +1903,134 @@ private:
                                 CMDLMap[AssetID].materialSets[imat].materialEndOffsets[mc] = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].materialEndOffsets[mc]);
                                 std::cout << "material end offset: " << std::hex << CMDLMap[AssetID].materialSets[imat].materialEndOffsets[mc] << std::dec << std::endl;
                             }
-
                             subGetLoc = subGetLoc + sizeof(CMDLMap[AssetID].materialSets[imat].textureCount) + CMDLMap[AssetID].materialSets[imat].textureCount * sizeof(uint32_t) + sizeof(CMDLMap[AssetID].materialSets[imat].materialCount) + CMDLMap[AssetID].materialSets[imat].materialCount * sizeof(uint32_t);
 
-                            uint32_t flags;
-                            memcpy(&flags, &rawFile.data()[subGetLoc], sizeof(flags));
-                            flags = swap_endian<uint32_t>(flags);
-                            std::cout << "offset: " << std::hex << subGetLoc << std::dec << std::endl;
-                            std::cout << "material properties:" << std::endl;
-                            std::cout << "\tUnused, always set:                                " << ((flags & 0x01) > 0 ? "on" : "off") << std::endl;
-                            std::cout << "\tUnused, always set:                                " << ((flags & 0x02) > 0 ? "on" : "off") << std::endl;
-                            std::cout << "\tUnused, never set:                                 " << ((flags & 0x04) > 0 ? "on" : "off") << std::endl;
-                            std::cout << "\tHas Konst values:                                  " << ((flags & 0x08) > 0 ? "on" : "off") << std::endl;
-                            std::cout << "\tIs transparent:                                    " << ((flags & 0x10) > 0 ? "on" : "off") << std::endl;
-                            std::cout << "\tMasked alpha:                                      " << ((flags & 0x20) > 0 ? "on" : "off") << std::endl;
-                            std::cout << "\tEnable Samus's reflection:                         " << ((flags & 0x40) > 0 ? "on" : "off") << std::endl;
-                            std::cout << "\tEnable Z-writes:                                   " << ((flags & 0x80) > 0 ? "on" : "off") << std::endl;
-                            std::cout << "\tEnable Samus's reflection, using the eye position: " << ((flags & 0x100) > 0 ? "on" : "off") << std::endl;
-                            std::cout << "\tShadow occluder mesh:                              " << ((flags & 0x200) > 0 ? "on" : "off") << std::endl;
-                            std::cout << "\tEnable indirect texture stage for reflections:     " << ((flags & 0x400) > 0 ? "on" : "off") << std::endl;
-                            std::cout << "\tIndicates a lightmap is present:                   " << ((flags & 0x800) > 0 ? "on" : "off") << std::endl;
-                            std::cout << "\tUnused, always set:                                " << ((flags & 0x1000) > 0 ? "on" : "off") << std::endl;
-                            std::cout << "\tEnable first UV coordinate to use short array:     " << ((flags & 0x2000) > 0 ? "on" : "off") << std::endl;
-                            std::cout << "\tunused, never set:                                 " << ((flags & 0x4000) > 0 ? "on" : "off") << std::endl;
-                            std::cout << "\tunused, never set:                                 " << ((flags & 0x8000) > 0 ? "on" : "off") << std::endl;
-                            subGetLoc += sizeof(flags);
-                            int32_t TC;
-                            memcpy(&TC, &rawFile.data()[subGetLoc], sizeof(TC));
-                            TC = swap_endian<int32_t>(TC);
-                            std::cout << "Texture Count: " << TC << std::endl;
-                            subGetLoc += sizeof(TC);
-                            while (TC > 100) {}
-                            CMDLMap[AssetID].materialSets[imat].textureFileIndices.resize(TC);
-                            std::cout << "textures:" << std::endl;
-                            for (int tx = 0; tx < TC; tx += sizeof(uint32_t)) {
-                                memcpy(&(CMDLMap[AssetID].materialSets[imat].textureFileIndices[tx]), &rawFile.data()[subGetLoc + tx], sizeof(uint32_t));
-                                CMDLMap[AssetID].materialSets[imat].textureFileIndices[tx] = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].textureFileIndices[tx]);
-                                //std::cout << CMDLMap[AssetID].materialSets[imat].textureFileIndices[tx] << std::endl;
-                                std::cout << "\ttexture: " << std::hex << CMDLMap[AssetID].materialSets[imat].textureFileIDs[CMDLMap[AssetID].materialSets[imat].textureFileIndices[tx]] << std::dec << std::endl;
-                            }
+                            uint32_t materialStartingMarker=subGetLoc;
 
-                            subGetLoc += TC * sizeof(uint32_t);
-
-                            //uint32_t vertexAtributeFlags;
-                            memcpy(&CMDLMap[AssetID].materialSets[imat].vertexAtributeFlags, &rawFile.data()[subGetLoc], sizeof(CMDLMap[AssetID].materialSets[imat].vertexAtributeFlags));
-                            CMDLMap[AssetID].materialSets[imat].vertexAtributeFlags = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].vertexAtributeFlags);
-                            std::cout << "vertex atributes: " << std::endl;
-                            std::cout << CMDLMap[AssetID].materialSets[imat].vertexAtributeFlags << std::endl;
-                            std::cout << "\tPosition: " << ((CMDLMap[AssetID].materialSets[imat].vertexAtributeFlags & 0x3) > 0 ? "1" : "0") << std::endl;
-                            std::cout << "\tNormal:   " << ((CMDLMap[AssetID].materialSets[imat].vertexAtributeFlags & 0xC) > 0 ? "1" : "0") << std::endl;
-                            std::cout << "\tColor 0:  " << ((CMDLMap[AssetID].materialSets[imat].vertexAtributeFlags & 0x30) > 0 ? "1" : "0") << std::endl;
-                            std::cout << "\tColor 1:  " << ((CMDLMap[AssetID].materialSets[imat].vertexAtributeFlags & 0xC0) > 0 ? "1" : "0") << std::endl;
-                            std::cout << "\tTex 0:    " << ((CMDLMap[AssetID].materialSets[imat].vertexAtributeFlags & 0x300) > 0 ? "1" : "0") << std::endl;
-                            std::cout << "\tTex 1:    " << ((CMDLMap[AssetID].materialSets[imat].vertexAtributeFlags & 0xC00) > 0 ? "1" : "0") << std::endl;
-                            std::cout << "\tTex 2:    " << ((CMDLMap[AssetID].materialSets[imat].vertexAtributeFlags & 0x3000) > 0 ? "1" : "0") << std::endl;
-                            std::cout << "\tTex 3:    " << ((CMDLMap[AssetID].materialSets[imat].vertexAtributeFlags & 0xC000) > 0 ? "1" : "0") << std::endl;
-                            std::cout << "\tTex 4:    " << ((CMDLMap[AssetID].materialSets[imat].vertexAtributeFlags & 0x30000) > 0 ? "1" : "0") << std::endl;
-                            std::cout << "\tTex 5:    " << ((CMDLMap[AssetID].materialSets[imat].vertexAtributeFlags & 0xC0000) > 0 ? "1" : "0") << std::endl;
-                            std::cout << "\tTex 6:    " << ((CMDLMap[AssetID].materialSets[imat].vertexAtributeFlags & 0x300000) > 0 ? "1" : "0") << std::endl;
-                            subGetLoc += sizeof(CMDLMap[AssetID].materialSets[imat].vertexAtributeFlags);
-                            uint32_t groupIndex;
-                            memcpy(&groupIndex, &rawFile.data()[subGetLoc], sizeof(groupIndex));
-                            groupIndex = swap_endian<uint32_t>(groupIndex);
-                            std::cout << "group index: " << groupIndex << std::endl;
-                            subGetLoc += sizeof(groupIndex);
-                            if ((flags & 0x08) > 0)
+                            CMDLMap[AssetID].materialSets[imat].materials.resize(CMDLMap[AssetID].materialSets[imat].materialCount+5);
+                            for (int ijk=0; ijk < CMDLMap[AssetID].materialSets[imat].materialCount;ijk++)
                             {
-                                uint32_t KonstCount;
-                                memcpy(&KonstCount, &rawFile.data()[subGetLoc], sizeof(KonstCount));
-                                KonstCount = swap_endian<uint32_t>(KonstCount);
-                                std::cout << KonstCount << std::endl;
-                                CMDLMap[AssetID].materialSets[imat].konstColors.resize(KonstCount);
-                                for (int mc = 0; mc < KonstCount; mc++) {
-                                    memcpy(&(CMDLMap[AssetID].materialSets[imat].konstColors[mc]), &rawFile.data()[subGetLoc + sizeof(KonstCount) + mc * sizeof(uint32_t)], sizeof(uint32_t));
-                                    CMDLMap[AssetID].materialSets[imat].konstColors[mc] = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].konstColors[mc]);
-                                    std::cout << "konst color " << mc << ": " << std::hex << CMDLMap[AssetID].materialSets[imat].konstColors[mc] << std::dec << std::endl;
+                                uint32_t flags;
+                                memcpy(&flags, &rawFile.data()[subGetLoc], sizeof(flags));
+                                flags = swap_endian<uint32_t>(flags);
+                                std::cout << "offset: " << std::hex << subGetLoc << std::dec << std::endl;
+                                std::cout << "material properties:" << std::endl;
+                                std::cout << "\tUnused, always set:                                " << ((flags & 0x01) > 0 ? "on" : "off") << std::endl;
+                                std::cout << "\tUnused, always set:                                " << ((flags & 0x02) > 0 ? "on" : "off") << std::endl;
+                                std::cout << "\tUnused, never set:                                 " << ((flags & 0x04) > 0 ? "on" : "off") << std::endl;
+                                std::cout << "\tHas Konst values:                                  " << ((flags & 0x08) > 0 ? "on" : "off") << std::endl;
+                                std::cout << "\tIs transparent:                                    " << ((flags & 0x10) > 0 ? "on" : "off") << std::endl;
+                                std::cout << "\tMasked alpha:                                      " << ((flags & 0x20) > 0 ? "on" : "off") << std::endl;
+                                std::cout << "\tEnable Samus's reflection:                         " << ((flags & 0x40) > 0 ? "on" : "off") << std::endl;
+                                std::cout << "\tEnable Z-writes:                                   " << ((flags & 0x80) > 0 ? "on" : "off") << std::endl;
+                                std::cout << "\tEnable Samus's reflection, using the eye position: " << ((flags & 0x100) > 0 ? "on" : "off") << std::endl;
+                                std::cout << "\tShadow occluder mesh:                              " << ((flags & 0x200) > 0 ? "on" : "off") << std::endl;
+                                std::cout << "\tEnable indirect texture stage for reflections:     " << ((flags & 0x400) > 0 ? "on" : "off") << std::endl;
+                                std::cout << "\tIndicates a lightmap is present:                   " << ((flags & 0x800) > 0 ? "on" : "off") << std::endl;
+                                std::cout << "\tUnused, always set:                                " << ((flags & 0x1000) > 0 ? "on" : "off") << std::endl;
+                                std::cout << "\tEnable first UV coordinate to use short array:     " << ((flags & 0x2000) > 0 ? "on" : "off") << std::endl;
+                                std::cout << "\tunused, never set:                                 " << ((flags & 0x4000) > 0 ? "on" : "off") << std::endl;
+                                std::cout << "\tunused, never set:                                 " << ((flags & 0x8000) > 0 ? "on" : "off") << std::endl;
+                                subGetLoc += sizeof(flags);
+                                int32_t TC;
+                                memcpy(&TC, &rawFile.data()[subGetLoc], sizeof(TC));
+                                TC = swap_endian<int32_t>(TC);
+                                std::cout << "Texture Count: " << TC << std::endl;
+                                subGetLoc += sizeof(TC);
+                                while (TC > 100) {}
+                                CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices.resize(TC);
+                                std::cout << "textures:" << std::endl;
+                                for (int tx = 0; tx < TC; tx += sizeof(uint32_t)) {
+                                    memcpy(&(CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx]), &rawFile.data()[subGetLoc + tx], sizeof(uint32_t));
+                                    CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx] = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx]);
+                                    //std::cout << CMDLMap[AssetID].materialSets[imat].textureFileIndices[tx] << std::endl;
+                                    std::cout << "\ttexture: " << std::hex << CMDLMap[AssetID].materialSets[imat].textureFileIDs[CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx]] << std::dec << std::endl;
                                 }
-                                subGetLoc += sizeof(KonstCount) + KonstCount * sizeof(uint32_t);
+
+                                subGetLoc += TC * sizeof(uint32_t);
+
+                                //uint32_t vertexAtributeFlags;
+                                memcpy(&CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags, &rawFile.data()[subGetLoc], sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags));
+                                CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags);
+                                std::cout << "vertex atributes: " << std::endl;
+                                std::cout << CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags << std::endl;
+                                std::cout << "\tPosition: " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x3) > 0 ? "1" : "0") << std::endl;
+                                std::cout << "\tNormal:   " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0xC) > 0 ? "1" : "0") << std::endl;
+                                std::cout << "\tColor 0:  " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x30) > 0 ? "1" : "0") << std::endl;
+                                std::cout << "\tColor 1:  " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0xC0) > 0 ? "1" : "0") << std::endl;
+                                std::cout << "\tTex 0:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x300) > 0 ? "1" : "0") << std::endl;
+                                std::cout << "\tTex 1:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0xC00) > 0 ? "1" : "0") << std::endl;
+                                std::cout << "\tTex 2:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x3000) > 0 ? "1" : "0") << std::endl;
+                                std::cout << "\tTex 3:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0xC000) > 0 ? "1" : "0") << std::endl;
+                                std::cout << "\tTex 4:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x30000) > 0 ? "1" : "0") << std::endl;
+                                std::cout << "\tTex 5:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0xC0000) > 0 ? "1" : "0") << std::endl;
+                                std::cout << "\tTex 6:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x300000) > 0 ? "1" : "0") << std::endl;
+                                subGetLoc += sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags);
+                                uint32_t groupIndex;
+                                memcpy(&groupIndex, &rawFile.data()[subGetLoc], sizeof(groupIndex));
+                                groupIndex = swap_endian<uint32_t>(groupIndex);
+                                std::cout << "group index: " << groupIndex << std::endl;
+                                subGetLoc += sizeof(groupIndex);
+                                if ((flags & 0x08) > 0)
+                                {
+                                    uint32_t KonstCount;
+                                    memcpy(&KonstCount, &rawFile.data()[subGetLoc], sizeof(KonstCount));
+                                    KonstCount = swap_endian<uint32_t>(KonstCount);
+                                    std::cout << KonstCount << std::endl;
+                                    CMDLMap[AssetID].materialSets[imat].materials[ijk].konstColors.resize(KonstCount);
+                                    for (int mc = 0; mc < KonstCount; mc++) {
+                                        memcpy(&(CMDLMap[AssetID].materialSets[imat].materials[ijk].konstColors[mc]), &rawFile.data()[subGetLoc + sizeof(KonstCount) + mc * sizeof(uint32_t)], sizeof(uint32_t));
+                                        CMDLMap[AssetID].materialSets[imat].materials[ijk].konstColors[mc] = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].materials[ijk].konstColors[mc]);
+                                        std::cout << "konst color " << mc << ": " << std::hex << CMDLMap[AssetID].materialSets[imat].materials[ijk].konstColors[mc] << std::dec << std::endl;
+                                    }
+                                    subGetLoc += sizeof(KonstCount) + KonstCount * sizeof(uint32_t);
+                                }
+                                std::cout << "offset: " << std::hex << subGetLoc << std::dec << std::endl;
+                                short blendDestFactor;
+                                memcpy(&blendDestFactor, &rawFile.data()[subGetLoc], sizeof(blendDestFactor));
+                                blendDestFactor = swap_endian<short>(blendDestFactor);
+                                std::cout << "blendDestFactor: " << blendDestFactor << std::endl;
+                                subGetLoc += sizeof(blendDestFactor);
+
+                                short blendSourceFactor;
+                                memcpy(&blendSourceFactor, &rawFile.data()[subGetLoc], sizeof(blendSourceFactor));
+                                blendSourceFactor = swap_endian<short>(blendSourceFactor);
+                                std::cout << "blendSourceFactor: " << blendSourceFactor << std::endl;
+                                subGetLoc += sizeof(blendSourceFactor);
+
+                                if ((flags & 0x400) != 0)
+                                {
+                                    uint32_t reflectionIndirectTextureIndex;
+                                    memcpy(&reflectionIndirectTextureIndex, &rawFile.data()[subGetLoc], sizeof(reflectionIndirectTextureIndex));
+                                    reflectionIndirectTextureIndex = swap_endian<uint32_t>(reflectionIndirectTextureIndex);
+                                    std::cout << "reflection Indirect Texture Index: " << reflectionIndirectTextureIndex << std::endl;
+                                    subGetLoc += sizeof(reflectionIndirectTextureIndex);
+                                }
+
+
+                                //
+                                memcpy(&(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount), &rawFile.data()[subGetLoc], sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount));
+                                CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount);
+                                std::cout << "color channel count: " << CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount << std::endl;
+                                std::cout << "offset: " << std::hex << subGetLoc << std::dec << std::endl;
+                                CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags.resize(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount);
+                                for (int mc = 0; mc < CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount; mc++) {
+                                    memcpy(&(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags[mc]), &rawFile.data()[subGetLoc + sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount) + mc * sizeof(uint32_t)], sizeof(uint32_t));
+                                    CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags[mc] = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags[mc]);
+                                    std::cout << "color channel flags: " << CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags[mc] << std::dec << std::endl;
+                                }
+                                subGetLoc += sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount) + CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount * sizeof(uint32_t);
+
+
+                                uint32_t TEVStageCount;
+                                memcpy(&TEVStageCount, &rawFile.data()[subGetLoc], sizeof(TEVStageCount));
+                                TEVStageCount = swap_endian<uint32_t>(TEVStageCount);
+                                std::cout << "TEV Stage Count: " << TEVStageCount << std::endl;
+                                subGetLoc += sizeof(TEVStageCount);
+
+                                subGetLoc = materialStartingMarker + CMDLMap[AssetID].materialSets[imat].materialEndOffsets[ijk];
+                                
                             }
-                            std::cout << "offset: " << std::hex << subGetLoc << std::dec << std::endl;
-                            short blendDestFactor;
-                            memcpy(&blendDestFactor, &rawFile.data()[subGetLoc], sizeof(blendDestFactor));
-                            blendDestFactor = swap_endian<short>(blendDestFactor);
-                            std::cout << "blendDestFactor: " << blendDestFactor << std::endl;
-                            subGetLoc += sizeof(blendDestFactor);
-
-                            short blendSourceFactor;
-                            memcpy(&blendSourceFactor, &rawFile.data()[subGetLoc], sizeof(blendSourceFactor));
-                            blendSourceFactor = swap_endian<short>(blendSourceFactor);
-                            std::cout << "blendSourceFactor: " << blendSourceFactor << std::endl;
-                            subGetLoc += sizeof(blendSourceFactor);
-
-                            if ((flags & 0x400) != 0)
-                            {
-                                uint32_t reflectionIndirectTextureIndex;
-                                memcpy(&reflectionIndirectTextureIndex, &rawFile.data()[subGetLoc], sizeof(reflectionIndirectTextureIndex));
-                                reflectionIndirectTextureIndex = swap_endian<uint32_t>(reflectionIndirectTextureIndex);
-                                std::cout << "reflection Indirect Texture Index: " << reflectionIndirectTextureIndex << std::endl;
-                                subGetLoc += sizeof(reflectionIndirectTextureIndex);
-                            }
-
-
-                            //
-                            memcpy(&(CMDLMap[AssetID].materialSets[imat].ColorChannelCount), &rawFile.data()[subGetLoc], sizeof(CMDLMap[AssetID].materialSets[imat].ColorChannelCount));
-                            CMDLMap[AssetID].materialSets[imat].ColorChannelCount = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].ColorChannelCount);
-                            std::cout << "color channel count: " << CMDLMap[AssetID].materialSets[imat].ColorChannelCount << std::endl;
-                            std::cout << "offset: " << std::hex << subGetLoc << std::dec << std::endl;
-                            CMDLMap[AssetID].materialSets[imat].ColorChannelFlags.resize(CMDLMap[AssetID].materialSets[imat].ColorChannelCount);
-                            for (int mc = 0; mc < CMDLMap[AssetID].materialSets[imat].ColorChannelCount; mc++) {
-                                memcpy(&(CMDLMap[AssetID].materialSets[imat].ColorChannelFlags[mc]), &rawFile.data()[subGetLoc + sizeof(CMDLMap[AssetID].materialSets[imat].ColorChannelCount) + mc * sizeof(uint32_t)], sizeof(uint32_t));
-                                CMDLMap[AssetID].materialSets[imat].ColorChannelFlags[mc] = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].ColorChannelFlags[mc]);
-                                std::cout << "color channel flags: " << CMDLMap[AssetID].materialSets[imat].ColorChannelFlags[mc] << std::dec << std::endl;
-                            }
-                            subGetLoc += sizeof(CMDLMap[AssetID].materialSets[imat].ColorChannelCount) + CMDLMap[AssetID].materialSets[imat].ColorChannelCount * sizeof(uint32_t);
-
-
-                            uint32_t TEVStageCount;
-                            memcpy(&TEVStageCount, &rawFile.data()[subGetLoc], sizeof(TEVStageCount));
-                            TEVStageCount = swap_endian<uint32_t>(TEVStageCount);
-                            std::cout << "TEV Stage Count: " << TEVStageCount << std::endl;
-                            subGetLoc += sizeof(TEVStageCount);
-
-
-
-
-
-
-
-
-
-
-
                             upperGetLoc += CMDLMap[AssetID].dataSectionSizes[imat];
                             subGetLoc = upperGetLoc;
                         }
@@ -2157,10 +2163,10 @@ private:
                         std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex)) << "] matIndex:" << CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex << std::dec << std::endl;
                         subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex);
 
-                        memcpy(&CMDLMap[AssetID].geometry.surfaces[surfaceNum].maintissa, &rawFile.data()[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].maintissa));
-                        CMDLMap[AssetID].geometry.surfaces[surfaceNum].maintissa = swap_endian<uint16_t>(CMDLMap[AssetID].geometry.surfaces[surfaceNum].maintissa);
-                        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].maintissa)) << "] maintissa:" << CMDLMap[AssetID].geometry.surfaces[surfaceNum].maintissa << std::dec << std::endl;
-                        subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].maintissa);
+                        memcpy(&CMDLMap[AssetID].geometry.surfaces[surfaceNum].mantissa, &rawFile.data()[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].mantissa));
+                        CMDLMap[AssetID].geometry.surfaces[surfaceNum].mantissa = swap_endian<uint16_t>(CMDLMap[AssetID].geometry.surfaces[surfaceNum].mantissa);
+                        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].mantissa)) << "] mantissa:" << CMDLMap[AssetID].geometry.surfaces[surfaceNum].mantissa << std::dec << std::endl;
+                        subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].mantissa);
 
                         memcpy(&CMDLMap[AssetID].geometry.surfaces[surfaceNum].displayListSize, &rawFile.data()[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].displayListSize));
                         CMDLMap[AssetID].geometry.surfaces[surfaceNum].displayListSize = swap_endian<uint16_t>(CMDLMap[AssetID].geometry.surfaces[surfaceNum].displayListSize);
@@ -2253,6 +2259,10 @@ private:
                                 uvc_vIndex = swap_endian<uint16_t>(uvc_vIndex);
                                 subGetLoc += sizeof(uvc_vIndex);
 
+                                //memcpy(&uvc_vIndex, &rawFile.data()[subGetLoc], sizeof(uvc_vIndex));
+                                //uvc_vIndex = swap_endian<uint16_t>(uvc_vIndex);
+                                //subGetLoc += sizeof(uvc_vIndex);
+
                                 if (ijk == 0) {
                                     pos_indexwaybefore = pos_vIndex;
                                     nml_indexwaybefore = nml_vIndex;
@@ -2266,19 +2276,19 @@ private:
                                 if (((CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags & 0xF8) == 0xA0)) {
                                     if (ijk > 1)
                                     {
-                                        if ((CMDLMap[AssetID].materialSets[0/*CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0x3) > 0)
+                                        if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x3) > 0)
                                         {
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.push_back(static_cast<uint32_t>(pos_indexwaybefore));
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.push_back(static_cast<uint32_t>(pos_index1before));
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.push_back(static_cast<uint32_t>(pos_vIndex));
                                         }
-                                        if ((CMDLMap[AssetID].materialSets[0/*CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0xC) > 0)
+                                        if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0xC) > 0)
                                         {
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.push_back(static_cast<uint32_t>(nml_indexwaybefore));
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.push_back(static_cast<uint32_t>(nml_index1before));
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.push_back(static_cast<uint32_t>(nml_vIndex));
                                         }
-                                        if ((CMDLMap[AssetID].materialSets.data()[0/*CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0x300) > 0)
+                                        if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x300) > 0)
                                         {
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_indexwaybefore));
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_index1before));
@@ -2289,19 +2299,19 @@ private:
                                 else if (((CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags & 0xF8) == 0x90))
                                 {
                                     if (ijk > 1 && (ijk + 1) % 3 == 0) {
-                                        if ((CMDLMap[AssetID].materialSets[0/*CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0x3) > 0)
+                                        if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x3) > 0)
                                         {
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.push_back(static_cast<uint32_t>(pos_index1before));
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.push_back(static_cast<uint32_t>(pos_index2before));
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.push_back(static_cast<uint32_t>(pos_vIndex));
                                         }
-                                        if ((CMDLMap[AssetID].materialSets[0/*CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0xC) > 0)
+                                        if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0xC) > 0)
                                         {
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.push_back(static_cast<uint32_t>(nml_index1before));
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.push_back(static_cast<uint32_t>(nml_index2before));
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.push_back(static_cast<uint32_t>(nml_vIndex));
                                         }
-                                        if ((CMDLMap[AssetID].materialSets.data()[0/*CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0x300) > 0)
+                                        if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x300) > 0)
                                         {
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_index1before));
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_index2before));
@@ -2312,24 +2322,25 @@ private:
                                 else if (((CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags & 0xF8) == 0x98))
                                 {
                                     if (ijk > 1) {
-                                        if ((CMDLMap[AssetID].materialSets[0/*CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0x3) > 0)
+                                        if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x3) > 0)
                                         {
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.push_back(static_cast<uint32_t>(pos_index2before));
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.push_back(static_cast<uint32_t>(pos_index1before));
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.push_back(static_cast<uint32_t>(pos_vIndex));
                                         }
-                                        if ((CMDLMap[AssetID].materialSets[0/*CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0xC) > 0)
+                                        if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0xC) > 0)
                                         {
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.push_back(static_cast<uint32_t>(nml_index2before));
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.push_back(static_cast<uint32_t>(nml_index1before));
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.push_back(static_cast<uint32_t>(nml_vIndex));
                                         }
-                                        if ((CMDLMap[AssetID].materialSets.data()[0/*CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0x300) > 0)
+                                        if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x300) > 0)
                                         {
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_index2before));
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_index1before));
                                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back(static_cast<uint32_t>(uvc_vIndex));
                                         }
+
                                     }
                                 }
                                 else
@@ -2502,12 +2513,17 @@ private:
                     std::cout << fourCC[0] << fourCC[1] << fourCC[2] << fourCC[3] << std::endl;
                 }
             }
+            else 
+            {
+                std::cout << "compression flag: " << std::hex << compressionFlag << std::dec << std::endl;
+                break;
+            }
             f.seekg(getLoc);
         }
     }
     void loadScene()
     {
-        loadPak("metroid2.pak");
+        loadPak("Metroid2.pak");
         //std::ifstream f(LEVEL_PATH);
         //if (!f.is_open())
         //    throw std::invalid_argument("level data not found");
