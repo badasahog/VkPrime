@@ -2019,7 +2019,7 @@ private:
                     for (int ijk = 0; ijk < CMDLs[cmdlIndex].geometry.floatUVCoords.size(); ijk++)
                     {
                         memcpy(&CMDLs[cmdlIndex].geometry.floatUVCoords[ijk], &rawFile.data()[subGetLoc], sizeof(float));
-                        CMDLs[cmdlIndex].geometry.floatUVCoords[ijk] = swap_endian<float>(CMDLs[cmdlIndex].geometry.floatUVCoords[ijk])/2;
+                        CMDLs[cmdlIndex].geometry.floatUVCoords[ijk] = swap_endian<float>(CMDLs[cmdlIndex].geometry.floatUVCoords[ijk]);
                         subGetLoc += sizeof(float);
                     }
 
