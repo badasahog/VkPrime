@@ -43,63 +43,7 @@ typedef uint32_t PrimeAssetID;
 const std::vector<std::string> images = {
     //"textures/TXTR_E802C6C6.png",
     "textures/TXTR_6518F07A.png",
-    //"textures/ss_1.png",
-    //"textures/ss_black.png",
-    //"textures/ss_blue.png",
-    //"textures/ss_blue_green.png",
-    //"textures/ss_canopy.png",
-    //"textures/ss_dark_blue.png",
-    //"textures/ss_dark_red.png",
-    //"textures/ss_glass.png",
-    //"textures/ss_green.png",
-    //"textures/ss_grey.png",
-    //"textures/ss_lgb.png",
-    //"textures/ss_light_blue.png",
-    //"textures/ss_light_green.png",
-    //"textures/ss_meter_G.png",
-    //"textures/ss_meter_O.png",
-    //"textures/ss_meter_Y.png",
-    //"textures/ss_outer_light_blue.png",
-    //"textures/ss_pbh.png",
-    //"textures/ss_red.png",
-    //"textures/ss_red_orange.png",
-    //"textures/ss_ship_interior.png",
-    //"textures/ss_ship_seat.png",
-    //"textures/ss_ship_wheel.png",
-    //"textures/ss_vanilla.png",
-    //"textures/ss_vanilla.png.001.png",
-    //"textures/ss_yellow.png",
-    //"textures/ss_yro.png",
-    //"textures/strip_1.png",
-    //"textures/strip_2.png",
-    //"textures/strip_3.png",
-    //"textures/strip_4.png",
-    //"textures/strip_5.png",
-    //"textures/strip_6.png",
-    //"textures/strip_7.png",
-    //"textures/ss_0.png",
-    //"textures/ss_1.png",
-    //"textures/ss_0.png",
-    //"textures/ss_1.png",
-    //"textures/ss_0.png",
-    //"textures/ss_1.png",
-    //"textures/ss_0.png",
-    //"textures/ss_1.png",
-    //"textures/ss_0.png",
-    //"textures/ss_1.png",
-    //"textures/ss_0.png",
-    //"textures/ss_1.png",
-    //"textures/ss_0.png",
-    //"textures/ss_1.png",
-    //"textures/ss_0.png",
-    //"textures/ss_1.png",
-    //"textures/ss_0.png",
-    //"textures/ss_1.png",
-    //"textures/ss_0.png",
-    //"textures/ss_1.png",
 };
-
-//const std::string LEVEL_PATH = "models/ssdolphin/lvl.dat";
 
 
 
@@ -2541,33 +2485,7 @@ private:
     }
     void loadScene()
     {
-        loadPak("Metroid7.pak");
-        //std::ifstream f(LEVEL_PATH);
-        //if (!f.is_open())
-        //    throw std::invalid_argument("level data not found");
-        //
-        //while (!f.eof())
-        //{
-        //    char line[128];
-        //    f.getline(line, 128);
-        //
-        //    std::strstream s;
-        //    s << line;
-        //    std::string objectFile;
-        //    Mesh m;
-        //    s >> m.filePath >> m.x >> m.y >> m.z;
-        //
-        //    m.filePath = "models/ssdolphin/" + m.filePath;
-        //    m.startIndex = indices.size();
-        //    m.vertOffset = vertices.size();
-        //    //loadModel(&m);
-        //
-        //    vertices.insert(vertices.end(), m.vertices.begin(), m.vertices.end());
-        //    indices.insert(indices.end(), m.indices.begin(), m.indices.end());
-        //
-        //    m.num_indices = indices.size() - m.startIndex;
-        //    objects.push_back(m);
-        //}
+        loadPak("SamusGun.pak");
 
     }
     void loadModel(Mesh* m) {
