@@ -20,6 +20,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="PrimeAssimp.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="PrimeAssimp.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -136,6 +140,13 @@
       <AdditionalLibraryDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\lib-vc2019;C:\VulkanSDK\1.2.135.0\Lib;C:\Users\yair\Documents\Visual Studio 2019\Libraries\libSquish-master\Debug;C:\Users\yair\Documents\Visual Studio 2019\Libraries\libSquish-master;C:\Users\yair\Documents\Visual Studio 2019\Libraries\zlib-1.2.11\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;vulkan-1.lib;squish.lib;zlib.lib;zlibstatic.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>cd C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\shaders
+C:/VulkanSDK/1.2.135.0/Bin32/glslc.exe shader.vert -o vert.spv
+C:/VulkanSDK/1.2.135.0/Bin32/glslc.exe shader.frag -o frag.spv
+C:/VulkanSDK/1.2.135.0/Bin32/glslc.exe sso_shader.vert -o sso_vert.spv
+C:/VulkanSDK/1.2.135.0/Bin32/glslc.exe sso_shader.frag -o sso_frag.spv</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
