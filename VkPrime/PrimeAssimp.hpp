@@ -215,6 +215,14 @@ struct MREA {
     std::vector<uint32_t> dataSectionSizes;
 };
 
+struct TXTR 
+{
+    uint32_t imageFormat;
+    uint16_t imageWidth;
+    uint16_t imageHeight;
+    uint32_t mipMapCount;
+};
+
 std::unordered_map<PrimeAssetID, CMDL> CMDLMap;
 std::unordered_map<PrimeAssetID, MLVL> MLVLMap;
 std::unordered_map<PrimeAssetID, STRG> STRGMap;
@@ -811,7 +819,7 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
     std::cout << "\tToggle short normals:           "<<((CMDLMap[AssetID].flags & 0x2)>0?"1":"0") << std::endl;
     std::cout << "\tEnable short UV array:          "<<((CMDLMap[AssetID].flags & 0x4)>0?"1":"0") << std::endl;
     bool halfPrecisionNormals = ((CMDLMap[AssetID].flags & 0x2) > 0);
-    bool halfPrecisionUVs     = ((CMDLMap[AssetID].flags & 0x3) > 0);
+    bool halfPrecisionUVs     = ((CMDLMap[AssetID].flags & 0x4) > 0);
 
     memcpy(CMDLMap[AssetID].ModelAxisAlignedBoundingBox, &rawFile[subGetLoc], sizeof(float) * 6);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(float) * 6) << "] Model Axis-Aligned Bounding Box:";
@@ -1258,9 +1266,12 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
             uint16_t nml_index2before = 0;
             uint16_t nml_indexwaybefore = 0;
 
-            uint16_t uvc_index1before = 0;
-            uint16_t uvc_index2before = 0;
-            uint16_t uvc_indexwaybefore = 0;
+            uint16_t uvc1_index1before = 0;
+            uint16_t uvc1_index2before = 0;
+            uint16_t uvc1_indexwaybefore = 0;
+            uint16_t uvc2_index1before = 0;
+            uint16_t uvc2_index2before = 0;
+            uint16_t uvc2_indexwaybefore = 0;
             for (int ijk = 0; ijk < CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount; ijk++)
             {
 
@@ -1311,7 +1322,7 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                 if (ijk == 0) {
                     pos_indexwaybefore = pos_vIndex;
                     nml_indexwaybefore = nml_vIndex;
-                    uvc_indexwaybefore = uvc1_vIndex;
+                    uvc1_indexwaybefore = uvc1_vIndex;
                 }
                 //std::cout << "vertex " << ijk << " position: " <<
                 //    CMDLMap[AssetID].geometry.vertexCoords.data()[vIndex * 3 + 0] << ", " <<
@@ -1335,8 +1346,8 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                         }
                         if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x300) > 0)
                         {
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc_indexwaybefore));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc_index1before));
+                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc1_indexwaybefore));
+                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc1_index1before));
                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc1_vIndex));
                         }
                     }
@@ -1358,8 +1369,8 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                         }
                         if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x300) > 0)
                         {
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc_index1before));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc_index2before));
+                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc1_index1before));
+                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc1_index2before));
                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc1_vIndex));
                         }
                     }
@@ -1381,8 +1392,8 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                         }
                         if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x300) > 0)
                         {
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc_index2before));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc_index1before));
+                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc1_index2before));
+                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc1_index1before));
                             CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc1_vIndex));
                         }
 
@@ -1394,6 +1405,12 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                 }
                 pos_index2before = pos_index1before;
                 pos_index1before = pos_vIndex;
+                nml_index2before = nml_index1before;
+                nml_index1before = nml_vIndex;
+                uvc1_index2before = uvc1_index1before;
+                uvc1_index1before = uvc1_vIndex;
+                //uvc2_index2before = uvc2_index1before;
+                //uvc2_index1before = uvc2_vIndex;
 
 
                 //if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0xC) > 0)

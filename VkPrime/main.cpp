@@ -40,6 +40,9 @@ const uint32_t HEIGHT = 600;
 //const std::string MODEL_PATH = "";
 const std::vector<std::string> images = {
     "textures/TXTR_8033012D.png",
+    "textures/TXTR_4E75CD72.png",
+    "textures/TXTR_E802C6C6.png",
+    "textures/TXTR_9304b76f.png",
 };
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
@@ -1287,10 +1290,10 @@ private:
             {
                 Vertex v;
                 v.pos = cmdl.geometry.vertexCoords[cmdl.geometry.surfaces[i].pos_indices[j]];
-                
+
                 v.texCoord = cmdl.geometry.floatUVCoords[cmdl.geometry.surfaces[i].uvc_indices[j]];
 
-                v.color = glm::vec3(0,0,0);
+                v.color = glm::vec3(0, 0, 0);
                 v.textureIndex = 0;
                 m.vertices.push_back(v);
                 m.indices.push_back(a);
@@ -1305,6 +1308,49 @@ private:
 
 
         objects.push_back(m);
+        rawFileLength = 0;
+        std::cout << rawFileLength << std::endl;
+        std::ofstream wf("objectDump.dat", std::ios::out | std::ios::binary);
+
+        for (int i = 0; i < cmdl.geometry.vertexCoords.size(); i++) {
+            std::string ln = "v ";
+            ln += std::to_string(cmdl.geometry.vertexCoords[i].x);
+            ln += " ";
+            ln += std::to_string(cmdl.geometry.vertexCoords[i].y);
+            ln += " ";
+            ln += std::to_string(cmdl.geometry.vertexCoords[i].z);
+            ln += "\n";
+            wf.write(ln.data(), ln.length());
+        }
+        for (int i = 0; i < cmdl.geometry.floatUVCoords.size(); i++) {
+            std::string ln = "vt ";
+            ln += std::to_string(cmdl.geometry.floatUVCoords[i].x);
+            ln += " ";
+            ln += std::to_string(cmdl.geometry.floatUVCoords[i].y);
+            ln += "\n";
+            wf.write(ln.data(), ln.length());
+        }
+        for (int i = 0; i < cmdl.geometry.normals.size(); i++) {
+            std::string ln = "vn ";
+            ln += std::to_string(cmdl.geometry.normals[i].x);
+            ln += " ";
+            ln += std::to_string(cmdl.geometry.normals[i].y);
+            ln += " ";
+            ln += std::to_string(cmdl.geometry.normals[i].z);
+            ln += "\n";
+            wf.write(ln.data(), ln.length());
+        }
+        for (int i = 0; i < cmdl.geometry.surfaces[0].pos_indices.size(); i+=3)
+        {
+            std::string ln = "f ";
+            ln += std::to_string(cmdl.geometry.surfaces[0].pos_indices[i + 0]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].uvc_indices[i + 0]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].nml_indices[i + 0]+1)+ " ";
+            ln += std::to_string(cmdl.geometry.surfaces[0].pos_indices[i + 1]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].uvc_indices[i + 1]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].nml_indices[i + 1]+1)+ " ";
+            ln += std::to_string(cmdl.geometry.surfaces[0].pos_indices[i + 2]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].uvc_indices[i + 2]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].nml_indices[i + 2]+1)+ "\n";
+            wf.write(ln.data(), ln.length());
+        }
+        wf.close();
+
+
 
         //
 
