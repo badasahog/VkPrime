@@ -14,7 +14,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#include <intrin.h>
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
@@ -29,26 +31,19 @@
 #include <set>
 #include <unordered_map>
 #include <strstream>
-#include <bitset>
 
+#include "PrimeAssimp.hpp"
 
-#include "PrimeAssimp.cpp"
-#define CHUNK 16384
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
-
 //const std::string MODEL_PATH = "";
 const std::vector<std::string> images = {
-    "textures/TXTR_E802C6C6.png",
-    //"textures/TXTR_6518F07A.png",
+    "textures/TXTR_8033012D.png",
 };
 
-const bool useSSBO = true;
-
-
-
 const int MAX_FRAMES_IN_FLIGHT = 2;
+
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation"
 };
@@ -62,6 +57,7 @@ const bool enableValidationLayers = false;
 #else
 const bool enableValidationLayers = true;
 #endif
+uint8_t jfielfjeafj = 0;
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
     auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     if (func != nullptr) {
@@ -93,9 +89,6 @@ struct SwapChainSupportDetails {
     std::vector<VkSurfaceFormatKHR> formats;
     std::vector<VkPresentModeKHR> presentModes;
 };
-
-
-
 struct player {
     double mousex = 0;
     double mousey = 0;
@@ -144,7 +137,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     return;
 
 }
-
 struct Vertex {
     glm::vec3 pos;
     glm::vec3 color;
@@ -186,7 +178,7 @@ struct Vertex {
     }
 
     bool operator==(const Vertex& other) const {
-        return pos == other.pos && color == other.color && texCoord == other.texCoord && textureIndex == other.textureIndex;
+        return pos == other.pos && color == other.color && texCoord == other.texCoord;
     }
 };
 
@@ -214,26 +206,10 @@ struct Mesh {
     std::vector<uint32_t> indices;
     std::string filePath;
 };
-struct HexCharStruct
-{
-    unsigned char c;
-    HexCharStruct(unsigned char _c) : c(_c) { }
-};
-
-inline std::ostream& operator<<(std::ostream& o, const HexCharStruct& hs)
-{
-    return (o << std::hex << (int)hs.c);
-}
-
-inline HexCharStruct hex(unsigned char _c)
-{
-    return HexCharStruct(_c);
-}
 
 class HelloTriangleApplication {
 public:
     void run() {
-        std::cout << "running" << std::endl;
         initWindow();
         initVulkan();
         mainLoop();
@@ -246,6 +222,7 @@ private:
     VkInstance instance;
     VkDebugUtilsMessengerEXT debugMessenger;
     VkSurfaceKHR surface;
+
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
     VkDevice device;
@@ -298,20 +275,6 @@ private:
     std::vector<VkBuffer> uniformBuffers;
     std::vector<VkDeviceMemory> uniformBuffersMemory;
 
-    VkBuffer posBuffer;
-    VkBuffer nmlBuffer;
-    VkBuffer uvcBuffer;
-    VkBuffer ndxBuffer;
-
-    VkDeviceMemory posBufferMemory;
-    VkDeviceMemory nmlBufferMemory;
-    VkDeviceMemory uvcBufferMemory;
-    VkDeviceMemory ndxBufferMemory;//index buffer
-    VkDeviceSize bufferSize_ndx = 0;
-
-
-
-
     VkDescriptorPool descriptorPool;
     std::vector<VkDescriptorSet> descriptorSets;
 
@@ -359,12 +322,9 @@ private:
         createTextureImageView();
         createTextureSampler();
         loadScene();
-        if (!useSSBO) {
-            createVertexBuffer();
-            createIndexBuffer();
-        }
+        createVertexBuffer();
+        createIndexBuffer();
         createUniformBuffers();
-        createStorageBuffers();
         createDescriptorPool();
         createDescriptorSets();
         createCommandBuffers();
@@ -772,7 +732,7 @@ private:
         VkDescriptorSetLayoutBinding uboLayoutBinding{};
         uboLayoutBinding.binding = 0;
         uboLayoutBinding.descriptorCount = 1;
-        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         uboLayoutBinding.pImmutableSamplers = nullptr;
         uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
@@ -783,38 +743,7 @@ private:
         samplerLayoutBinding.pImmutableSamplers = nullptr;
         samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-        VkDescriptorSetLayoutBinding posLayoutBinding{};
-        posLayoutBinding.binding = 6;
-        posLayoutBinding.descriptorCount = 1;
-        posLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        posLayoutBinding.pImmutableSamplers = nullptr;
-        posLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-        VkDescriptorSetLayoutBinding nmlLayoutBinding{};
-        nmlLayoutBinding.binding = 7;
-        nmlLayoutBinding.descriptorCount = 1;
-        nmlLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        nmlLayoutBinding.pImmutableSamplers = nullptr;
-        nmlLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-        VkDescriptorSetLayoutBinding uvcLayoutBinding{};
-        uvcLayoutBinding.binding = 8;
-        uvcLayoutBinding.descriptorCount = 1;
-        uvcLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        uvcLayoutBinding.pImmutableSamplers = nullptr;
-        uvcLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-        VkDescriptorSetLayoutBinding ndxLayoutBinding{};
-        ndxLayoutBinding.binding = 9;
-        ndxLayoutBinding.descriptorCount = 1;
-        ndxLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        ndxLayoutBinding.pImmutableSamplers = nullptr;
-        ndxLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-
-
-
-        std::array<VkDescriptorSetLayoutBinding, 6> bindings = {uboLayoutBinding, samplerLayoutBinding, posLayoutBinding, nmlLayoutBinding, uvcLayoutBinding, ndxLayoutBinding };
+        std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
@@ -826,8 +755,8 @@ private:
     }
 
     void createGraphicsPipeline() {
-        auto vertShaderCode = readFile(useSSBO?"shaders/sso_vert.spv":"shaders/vert.spv");
-        auto fragShaderCode = readFile(useSSBO?"shaders/sso_frag.spv":"shaders/frag.spv");
+        auto vertShaderCode = readFile("shaders/vert.spv");
+        auto fragShaderCode = readFile("shaders/frag.spv");
 
         VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
         VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -852,8 +781,8 @@ private:
         auto bindingDescription = Vertex::getBindingDescription();
         auto attributeDescriptions = Vertex::getAttributeDescriptions();
 
-        vertexInputInfo.vertexBindingDescriptionCount = 0;
-        vertexInputInfo.vertexAttributeDescriptionCount = 0;// static_cast<uint32_t>(attributeDescriptions.size());
+        vertexInputInfo.vertexBindingDescriptionCount = 1;
+        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
         vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
         vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
@@ -1328,94 +1257,188 @@ private:
 
         endSingleTimeCommands(commandBuffer);
     }
-
-
-    int inf(char* source, uint32_t inputSize, char* dest)
-    {
-        uint32_t srcLoc = 0;
-        int ret;
-        unsigned have;
-        z_stream strm;
-        unsigned char in[CHUNK];
-        unsigned char out[CHUNK];
-        uint32_t q = 0;
-        /* allocate inflate state */
-        strm.zalloc = Z_NULL;
-        strm.zfree = Z_NULL;
-        strm.opaque = Z_NULL;
-        strm.avail_in = 0;
-        strm.next_in = Z_NULL;
-        ret = inflateInit(&strm);
-        if (ret != Z_OK)
-            return ret;
-
-        /* decompress until deflate stream ends or end of file */
-        do {
-            //copy CHUNK amount of bytes from the input into `in` and return the number of bytes left to decompress
-            //set strm.avail_in to the number of bytes left to decompress
-            strm.avail_in = (inputSize - srcLoc) % CHUNK;
-
-            //copy the next CHUNK number of butes from the source to the `in` array
-            std::memcpy(in, source, (inputSize - srcLoc) % CHUNK);
-            std::cout << "flag 1" << std::endl;
-            srcLoc += CHUNK;
-
-
-            //not neaded because this is only for checking for file read errors
-            //if (ferror(source)) {
-            //    (void)inflateEnd(&strm);
-            //    return Z_ERRNO;
-            //}
-            if (strm.avail_in == 0)
-                break;
-            strm.next_in = in;
-
-            /* run inflate() on input until output buffer not full */
-            do {
-                strm.avail_out = CHUNK;
-                strm.next_out = out;
-                ret = inflate(&strm, Z_NO_FLUSH);
-                assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
-                switch (ret) {
-                case Z_NEED_DICT:
-                    ret = Z_DATA_ERROR;     /* and fall through */
-                case Z_DATA_ERROR:
-                case Z_MEM_ERROR:
-                    (void)inflateEnd(&strm);
-                    return ret;
-                }
-                have = CHUNK - strm.avail_out;
-                //save the output (in the `out` variable) to the dest variable
-                memcpy(&dest[q], out, have);
-                q += have;
-                //if (fwrite(out, 1, have, dest) != have || ferror(dest)) {
-                //    (void)inflateEnd(&strm);
-                //    return Z_ERRNO;
-                //}
-            } while (strm.avail_out == 0);
-
-            /* done when inflate() says it's done */
-        } while (ret != Z_STREAM_END);
-
-        /* clean up and return */
-        (void)inflateEnd(&strm);
-        return ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
-    }
-    void uint32FromBuffer(uint32_t* output, char* input, uint32_t inputIndex)
-    {
-        *output =
-            (input[inputIndex + 0] & 0xFF) << 0 |
-            (input[inputIndex + 1] & 0xFF) << 8 |
-            (input[inputIndex + 2] & 0xFF) << 16 |
-            (input[inputIndex + 3] & 0xFF) << 24;
-    }
-    
     void loadScene()
     {
-        loadPak("Metroid2.pak");
+        //loadPak("Metroid2.pak");
+
+        //investigate cmdl: 0xEC81CD52
+        //random bea thing: 0x729EA8BA
+        //door: 0xD3D3AB81
+        //mlvl: 0x83F6FF6F
+        //mlvl skybox cmdl: 0x817968F9
+        //strg: 0x1A626AAC
+        //STRG strg = *loadSTRG(0x1A626AAC, "Metroid2.pak");
+        CMDL cmdl = *loadCMDL(0x729EA8BA, "Metroid2.pak");
+        //MLVL mlvl = *loadMLVL(0x83F6FF6F, "Metroid2.pak");
+        //
+        //loadSTRG(mlvl.worldNameID,"Metroid2.pak");
+        //
+        //for (int i = 0; i < mlvl.areaArray.size(); i++)
+        //{
+        //    loadSTRG(mlvl.areaArray[i].areaNameID,"Metroid2.pak");
+        //}
+        Mesh m;
+        int a = 0;
+        m.startIndex = indices.size();
+        m.vertOffset = vertices.size();
+        for (int i = 0; i < cmdl.geometry.surfaces.size(); i++)
+        {
+            for (int j = 0; j < cmdl.geometry.surfaces[i].pos_indices.size(); j++)
+            {
+                Vertex v;
+                v.pos = cmdl.geometry.vertexCoords[cmdl.geometry.surfaces[i].pos_indices[j]];
+                
+                v.texCoord = cmdl.geometry.floatUVCoords[cmdl.geometry.surfaces[i].uvc_indices[j]];
+
+                v.color = glm::vec3(0,0,0);
+                v.textureIndex = 0;
+                m.vertices.push_back(v);
+                m.indices.push_back(a);
+                a++;
+            }
+        }
+        indices.insert(indices.end(), m.indices.begin(), m.indices.end());
+        vertices.insert(vertices.end(), m.vertices.begin(), m.vertices.end());
+
+        m.num_indices = indices.size() - m.startIndex;
+
+
+
+        objects.push_back(m);
+
+        //
+
+    //    std::ifstream f(LEVEL_PATH);
+    //    if (!f.is_open())
+    //        throw std::invalid_argument("level data not found");
+    //
+    //    while (!f.eof())
+    //    {
+    //        char line[128];
+    //        f.getline(line, 128);
+    //
+    //        std::strstream s;
+    //        s << line;
+    //        std::string objectFile;
+    //        Mesh m;
+    //        s >> m.filePath >> m.x >> m.y >> m.z;
+    //
+    //        m.filePath = "models/ssdolphin/" + m.filePath;
+    //        m.startIndex = indices.size();
+    //        m.vertOffset = vertices.size();
+    //        loadModel(&m);
+    //
+    //        indices.insert(indices.end(), m.indices.begin(), m.indices.end());
+    //        vertices.insert(vertices.end(), m.vertices.begin(), m.vertices.end());
+    //
+    //        m.num_indices = indices.size() - m.startIndex;
+    //        objects.push_back(m);
+    //    }
 
     }
-    
+    void loadModel(Mesh* m) {
+        tinyobj::attrib_t attrib;
+        //std::vector<tinyobj::shape_t> shapes;
+        //std::vector<tinyobj::material_t> materials;
+        //std::string warn, err;
+
+        //if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, m->filePath.c_str())) {
+         //   throw std::runtime_error(warn + err);
+        //}
+
+
+
+        std::ifstream infile(m->filePath);
+
+
+
+
+        std::unordered_map<Vertex, uint32_t> uniqueVertices{};
+        std::vector<double> VXS;
+        std::vector<double> VYS;
+        std::vector<double> VZS;
+        std::vector<double> TXS;
+        std::vector<double> TYS;
+        std::vector<uint8_t> TIDX;
+
+        while (!infile.eof())
+        {
+            char line[128];
+            infile.getline(line, 128);
+
+            std::strstream s;
+            s << line;
+            char junk;
+            if (line[0] == 'v' && line[1] == 't')
+            {
+                float a, b;
+                s >> junk >> a >> b;
+                TXS.push_back(a);
+                TYS.push_back(b);
+            }
+            else if (line[0] == 'v' && line[1] == 'n') {}//I don't care about normals
+            else if (line[0] == 'v') {
+                float a, b, c;
+
+                s >> junk >> a >> b >> c;
+
+                VXS.push_back(a);
+                VYS.push_back(b);
+                VZS.push_back(c);
+            }
+            else if (line[0] == 'f')
+            {
+                //std::cout << VXS.size() << std::endl;
+                //std::cout << VYS.size() << std::endl;
+                //std::cout << VZS.size() << std::endl;
+                Vertex vertex{};
+
+                int v[3], t[3], n[3];
+                int ti;
+                s >> junk >> v[0] >> t[0] >> n[0] >> v[1] >> t[1] >> n[1] >> v[2] >> t[2] >> n[2] >> ti;
+
+                for (size_t vnum = 0; vnum < 3; vnum++) {
+                    // access to vertex
+                    //tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
+                    glm::vec3 inputPosition = glm::vec3(
+                        VXS[v[vnum] - 1],
+                        VYS[v[vnum] - 1],
+                        VZS[v[vnum] - 1]
+                    );
+                    if (VXS.size() == 61)
+                        std::cout << VXS[v[vnum] - 1] << ", " << VYS[v[vnum] - 1] << ", " << VZS[v[vnum] - 1] << std::endl;
+                    // Apply rotation to correct for incorrect Blender model export
+                    glm::mat4 rotmat = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+
+                    // Define per object offsets
+                    glm::vec3 offset = glm::vec3(m->x, m->y, m->z);
+
+
+
+                    // Final vertex position
+                    vertex.pos = glm::vec3(rotmat * glm::vec4(inputPosition, 1.0)) + offset;
+
+                    vertex.textureIndex = ti;
+                    //std::cout << "vertex.textureIndex = " << vertex.textureIndex << std::endl;
+
+                    vertex.texCoord = {
+                        TXS[t[vnum] - 1],
+                        1.0f - TYS[t[vnum] - 1]
+                    };
+                    vertex.color = { 1.0f, 1.0f, 1.0f };
+
+                    if (uniqueVertices.count(vertex) == 0) {
+                        uniqueVertices[vertex] = static_cast<uint32_t>(m->vertices.size());
+                        m->vertices.push_back(vertex);
+                    }
+
+                    m->indices.push_back(uniqueVertices[vertex]);
+                }
+
+
+            }
+        }
+    }
 
     void createVertexBuffer() {
         VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
@@ -1464,73 +1487,17 @@ private:
         uniformBuffersMemory.resize(swapChainImages.size());
 
         for (size_t i = 0; i < swapChainImages.size(); i++) {
-            createBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
+            createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
         }
     }
 
-    void createStorageBuffers() {
-        std::cout << "\tAsset ID  (late)         " << std::hex << tempID << std::dec << std::endl;
-
-        VkDeviceSize bufferSize_pos = CMDLMap[tempID].geometry.vertexCoords.size() * sizeof(float);
-        VkDeviceSize bufferSize_nml = CMDLMap[tempID].geometry.normals.size() * sizeof(float);
-        VkDeviceSize bufferSize_uvc = CMDLMap[tempID].geometry.floatUVCoords.size() * sizeof(float);
-
-        for (int i = 0; i < CMDLMap[tempID].geometry.surfaceCount; i++)
-        {
-            bufferSize_ndx += CMDLMap[tempID].geometry.surfaces[i].pos_indices.size() * sizeof(uint32_t);
-            bufferSize_ndx += CMDLMap[tempID].geometry.surfaces[i].nml_indices.size() * sizeof(uint32_t);
-            bufferSize_ndx += CMDLMap[tempID].geometry.surfaces[i].uvc_indices.size() * sizeof(uint32_t);
-        }
-
-        createBuffer(bufferSize_pos, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, posBuffer, posBufferMemory);
-        createBuffer(bufferSize_nml, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, nmlBuffer, nmlBufferMemory);
-        createBuffer(bufferSize_uvc, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uvcBuffer, uvcBufferMemory);
-        createBuffer(bufferSize_ndx, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, ndxBuffer, ndxBufferMemory);
-    
-        void* data;
-
-        vkMapMemory(device, posBufferMemory, 0, bufferSize_pos, 0, &data);
-        memcpy(data, CMDLMap[tempID].geometry.vertexCoords.data(), bufferSize_pos);
-        vkUnmapMemory(device, posBufferMemory);
-
-        vkMapMemory(device, nmlBufferMemory, 0, bufferSize_nml, 0, &data);
-        memcpy(data, CMDLMap[tempID].geometry.normals.data(), bufferSize_nml);
-        vkUnmapMemory(device, nmlBufferMemory);
-
-        vkMapMemory(device, uvcBufferMemory, 0, bufferSize_uvc, 0, &data);
-        memcpy(data, CMDLMap[tempID].geometry.floatUVCoords.data(), bufferSize_uvc);
-        vkUnmapMemory(device, uvcBufferMemory);
-
-        
-        uint32_t* data2;
-
-        vkMapMemory(device, ndxBufferMemory, 0, bufferSize_ndx, 0, (void**)&data2);
-        for (int i = 0; i < CMDLMap[tempID].geometry.surfaceCount; i++)
-        {
-            for (int j = 0; j < CMDLMap[tempID].geometry.surfaces[i].pos_indices.size(); j++) {
-                *data2 = CMDLMap[tempID].geometry.surfaces[i].pos_indices[j];
-                data2++;
-                *data2 = CMDLMap[tempID].geometry.surfaces[i].nml_indices[j];
-                data2++;
-                *data2 = CMDLMap[tempID].geometry.surfaces[i].uvc_indices[j];
-                data2++;
-
-            }
-        }
-
-        vkUnmapMemory(device, ndxBufferMemory);
-    
-    }
     void createDescriptorPool() {
-        std::array<VkDescriptorPoolSize, useSSBO?3:2> poolSizes{};
-        poolSizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        std::array<VkDescriptorPoolSize, 2> poolSizes{};
+        poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
         poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChainImages.size() * images.size());
-        if (useSSBO) {
-            poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            poolSizes[2].descriptorCount = 4 * static_cast<uint32_t>(swapChainImages.size());
-        }
+
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
@@ -1554,25 +1521,6 @@ private:
         if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate descriptor sets!");
         }
-        VkDescriptorBufferInfo posBufferInfo{};
-        VkDescriptorBufferInfo nmlBufferInfo{};
-        VkDescriptorBufferInfo uvcBufferInfo{};
-        VkDescriptorBufferInfo ndxBufferInfo{};
-        if (useSSBO) 
-        {
-            posBufferInfo.buffer = posBuffer;
-            nmlBufferInfo.buffer = nmlBuffer;
-            uvcBufferInfo.buffer = uvcBuffer;
-            ndxBufferInfo.buffer = ndxBuffer;
-            posBufferInfo.offset = 0;
-            nmlBufferInfo.offset = 0;
-            uvcBufferInfo.offset = 0;
-            ndxBufferInfo.offset = 0;
-            posBufferInfo.range = VK_WHOLE_SIZE;
-            nmlBufferInfo.range = VK_WHOLE_SIZE;
-            uvcBufferInfo.range = VK_WHOLE_SIZE;
-            ndxBufferInfo.range = VK_WHOLE_SIZE;
-        }
 
         for (size_t i = 0; i < swapChainImages.size(); i++) {
             VkDescriptorBufferInfo bufferInfo{};
@@ -1589,13 +1537,14 @@ private:
                 imageInfo[x].sampler = imageStuffs.at(x).textureSampler;
             }
 
-            std::array<VkWriteDescriptorSet, (useSSBO?6:0)> descriptorWrites{};
+
+            std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
 
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].dstSet = descriptorSets[i];
             descriptorWrites[0].dstBinding = 0;
             descriptorWrites[0].dstArrayElement = 0;
-            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             descriptorWrites[0].descriptorCount = 1;
             descriptorWrites[0].pBufferInfo = &bufferInfo;
 
@@ -1606,39 +1555,8 @@ private:
             descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             descriptorWrites[1].descriptorCount = images.size();
             descriptorWrites[1].pImageInfo = &imageInfo[0];
-            if (useSSBO) {
-                descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                descriptorWrites[2].dstSet = descriptorSets[i];
-                descriptorWrites[2].dstBinding = 6;
-                descriptorWrites[2].dstArrayElement = 0;
-                descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-                descriptorWrites[2].descriptorCount = 1;
-                descriptorWrites[2].pBufferInfo = &posBufferInfo;
 
-                descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                descriptorWrites[3].dstSet = descriptorSets[i];
-                descriptorWrites[3].dstBinding = 7;
-                descriptorWrites[3].dstArrayElement = 0;
-                descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-                descriptorWrites[3].descriptorCount = 1;
-                descriptorWrites[3].pBufferInfo = &nmlBufferInfo;
 
-                descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                descriptorWrites[4].dstSet = descriptorSets[i];
-                descriptorWrites[4].dstBinding = 8;
-                descriptorWrites[4].dstArrayElement = 0;
-                descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-                descriptorWrites[4].descriptorCount = 1;
-                descriptorWrites[4].pBufferInfo = &uvcBufferInfo;
-
-                descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                descriptorWrites[5].dstSet = descriptorSets[i];
-                descriptorWrites[5].dstBinding = 9;
-                descriptorWrites[5].dstArrayElement = 0;
-                descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-                descriptorWrites[5].descriptorCount = 1;
-                descriptorWrites[5].pBufferInfo = &ndxBufferInfo;
-            }
             vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         }
     }
@@ -1766,32 +1684,30 @@ private:
 
             VkBuffer vertexBuffers[] = { vertexBuffer };
             VkDeviceSize offsets[] = { 0 };
-            //vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
+            vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
 
-            //vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+            vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
             vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
             uint32_t offset__ = 0;
-            //for (int j = 0; j < objects.size(); j++)
-            //{
-            //    /*
-            //    commandBuffer,
-            //    indexCount,
-            //    instanceCount,
-            //    firstIndex,
-            //    vertexOffset,
-            //    firstInstance
-            //    */
-            //    vkCmdDrawIndexed(commandBuffers[i],
-            //        static_cast<uint32_t>(objects[j].num_indices),
-            //        1,
-            //        static_cast<uint32_t>(objects[j].startIndex),
-            //        static_cast<uint32_t>(objects[j].vertOffset),
-            //        0);
-            //    offset__ += (objects[j].num_indices);
-            //}
-            vkCmdDraw(commandBuffers[i], bufferSize_ndx/sizeof(uint32_t),1,0,0);
-            
+            for (int j = 0; j < objects.size(); j++)
+            {
+                /*
+                commandBuffer,
+                indexCount,
+                instanceCount,
+                firstIndex,
+                vertexOffset,
+                firstInstance
+                */
+                vkCmdDrawIndexed(commandBuffers[i],
+                    static_cast<uint32_t>(objects[j].num_indices),
+                    1,
+                    static_cast<uint32_t>(objects[j].startIndex),
+                    static_cast<uint32_t>(objects[j].vertOffset),
+                    0);
+                offset__ += (objects[j].num_indices);
+            }
             vkCmdEndRenderPass(commandBuffers[i]);
 
             if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS) {
@@ -2124,8 +2040,8 @@ private:
 };
 
 int main() {
-    std::cout << "test test" << std::endl;
     HelloTriangleApplication app;
+    
 
     try {
         app.run();
