@@ -1272,6 +1272,8 @@ private:
         //strg: 0x1A626AAC
         //STRG strg = *loadSTRG(0x1A626AAC, "Metroid2.pak");
         CMDL cmdl = *loadCMDL(0x729EA8BA, "Metroid2.pak");
+
+        TXTR txtr = *loadTXTR(cmdl.materialSets[0].textureFileIDs[0],"Metroid2.pak");
         //MLVL mlvl = *loadMLVL(0x83F6FF6F, "Metroid2.pak");
         //
         //loadSTRG(mlvl.worldNameID,"Metroid2.pak");

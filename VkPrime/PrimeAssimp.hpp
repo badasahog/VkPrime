@@ -214,29 +214,37 @@ struct MREA {
     uint32_t areaOctreeSection;
     std::vector<uint32_t> dataSectionSizes;
 };
+struct DXT1
+{
 
+};
 struct TXTR 
 {
     uint32_t imageFormat;
     uint16_t imageWidth;
     uint16_t imageHeight;
     uint32_t mipMapCount;
+    std::vector<char> GCpixels;
+    std::vector<char> PCpixels;
 };
 
 std::unordered_map<PrimeAssetID, CMDL> CMDLMap;
 std::unordered_map<PrimeAssetID, MLVL> MLVLMap;
 std::unordered_map<PrimeAssetID, STRG> STRGMap;
 std::unordered_map<PrimeAssetID, MREA> MREAMap;
+std::unordered_map<PrimeAssetID, TXTR> TXTRMap;
 
 CMDL*       loadCMDL(PrimeAssetID assetID, std::string pakFile); 
 MLVL*       loadMLVL(PrimeAssetID assetID, std::string pakFile); 
 STRG*       loadSTRG(PrimeAssetID assetID, std::string pakFile);
 MREA*       loadMREA(PrimeAssetID assetID, std::string pakFile);
+TXTR*       loadTXTR(PrimeAssetID assetID, std::string pakFile);
 
 void        loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID);
 void        loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID);
 void        loadSTRG(std::vector<char> rawFile, PrimeAssetID AssetID);
 void        loadMREA(std::vector<char> rawFile, PrimeAssetID AssetID);
+void        loadTXTR(std::vector<char> rawFile, PrimeAssetID AssetID);
 void loadPak(std::string filename);
 
 
@@ -406,15 +414,47 @@ MREA* loadMREA(PrimeAssetID assetID, std::string pakFile) {
 
     return &MREAMap[assetID];
 }
+TXTR* loadTXTR(PrimeAssetID assetID, std::string pakFile) {
+    if ((TXTRMap.find(assetID) == TXTRMap.end()))
+    {
+        loadTXTR(findAsset(assetID, pakFile), assetID);
+    }
+
+    return &TXTRMap[assetID];
+}
+void loadTXTR(std::vector<char> rawFile, PrimeAssetID AssetID)
+{
+    TXTRMap[AssetID].imageFormat = 0xBAD0DADA;
+    uint64_t subGetLoc = 0;
+
+    memcpy(&TXTRMap[AssetID].imageFormat, &rawFile[subGetLoc], sizeof(TXTRMap[AssetID].imageFormat));
+    TXTRMap[AssetID].imageFormat = swap_endian<int32_t>(TXTRMap[AssetID].imageFormat);
+    std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(TXTRMap[AssetID].imageFormat)) << "] image format:" << TXTRMap[AssetID].imageFormat << std::dec << std::endl;
+    subGetLoc += sizeof(TXTRMap[AssetID].imageFormat);
+
+    memcpy(&TXTRMap[AssetID].imageWidth, &rawFile[subGetLoc], sizeof(TXTRMap[AssetID].imageWidth));
+    TXTRMap[AssetID].imageWidth = swap_endian<int16_t>(TXTRMap[AssetID].imageWidth);
+    std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(TXTRMap[AssetID].imageWidth)) << "] image width:" << std::dec << TXTRMap[AssetID].imageWidth << std::endl;
+    subGetLoc += sizeof(TXTRMap[AssetID].imageWidth);
+
+    memcpy(&TXTRMap[AssetID].imageHeight, &rawFile[subGetLoc], sizeof(TXTRMap[AssetID].imageHeight));
+    TXTRMap[AssetID].imageHeight = swap_endian<int16_t>(TXTRMap[AssetID].imageHeight);
+    std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(TXTRMap[AssetID].imageHeight)) << "] image height:" << std::dec << TXTRMap[AssetID].imageHeight << std::endl;
+    subGetLoc += sizeof(TXTRMap[AssetID].imageHeight);
+
+    memcpy(&TXTRMap[AssetID].mipMapCount, &rawFile[subGetLoc], sizeof(TXTRMap[AssetID].mipMapCount));
+    TXTRMap[AssetID].mipMapCount = swap_endian<int32_t>(TXTRMap[AssetID].mipMapCount);
+    std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(TXTRMap[AssetID].mipMapCount)) << "] mipmap count:" << std::dec << TXTRMap[AssetID].mipMapCount << std::endl;
+    subGetLoc += sizeof(TXTRMap[AssetID].mipMapCount);
+}
 void loadMREA(std::vector<char> rawFile, PrimeAssetID AssetID)
 {
     MREAMap[AssetID].magic = 0xBAD0DADA;
 }
 void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
 {
-    MLVLMap[AssetID].magic = 0xbad0dada;
+    MLVLMap[AssetID].magic = 0xBAD0DADA;
     uint64_t subGetLoc = 0;
-    std::cout << rawFile.size()<<std::endl;
     memcpy(&MLVLMap[AssetID].magic, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].magic));
     MLVLMap[AssetID].magic = swap_endian<int32_t>(MLVLMap[AssetID].magic);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].magic)) << "] magic:" << MLVLMap[AssetID].magic << std::dec << std::endl;
