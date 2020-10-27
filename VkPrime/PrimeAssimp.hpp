@@ -224,8 +224,7 @@ struct TXTR
     uint16_t imageWidth;
     uint16_t imageHeight;
     uint32_t mipMapCount;
-    std::vector<char> GCpixels;
-    std::vector<char> PCpixels;
+    std::vector<unsigned char> PCpixels;
 };
 
 std::unordered_map<PrimeAssetID, CMDL> CMDLMap;
@@ -422,6 +421,98 @@ TXTR* loadTXTR(PrimeAssetID assetID, std::string pakFile) {
 
     return &TXTRMap[assetID];
 }
+
+
+
+
+
+static int Unpack565(uint8_t const* packed, uint8_t* colour)
+{
+    // build the packed value - GCN: indices reversed
+    int value = (int)packed[1] | ((int)packed[0] << 8);
+
+    // get the components in the stored range
+    uint8_t red = (uint8_t)((value >> 11) & 0x1f);
+    uint8_t green = (uint8_t)((value >> 5) & 0x3f);
+    uint8_t blue = (uint8_t)(value & 0x1f);
+
+    // scale up to 8 bits
+    colour[0] = (red << 3) | (red >> 2);
+    colour[1] = (green << 2) | (green >> 4);
+    colour[2] = (blue << 3) | (blue >> 2);
+    colour[3] = 255;
+
+    // return the value
+    return value;
+}
+
+void DecompressColourGCN(uint32_t texWidth, uint8_t* rgba, void const* block)
+{
+    // get the block bytes
+    uint8_t const* bytes = reinterpret_cast<uint8_t const*>(block);
+
+    // unpack the endpoints
+    uint8_t codes[16];
+    int a = Unpack565(bytes, codes);
+    int b = Unpack565(bytes + 2, codes + 4);
+
+    // generate the midpoints
+    for (int i = 0; i < 3; ++i)
+    {
+        int c = codes[i];
+        int d = codes[4 + i];
+
+        if (a <= b)
+        {
+            codes[8 + i] = (uint8_t)((c + d) / 2);
+            // GCN: Use midpoint RGB rather than black
+            codes[12 + i] = codes[8 + i];
+        }
+        else
+        {
+            // GCN: 3/8 blend rather than 1/3
+            codes[8 + i] = (uint8_t)((c * 5 + d * 3) >> 3);
+            codes[12 + i] = (uint8_t)((c * 3 + d * 5) >> 3);
+        }
+    }
+
+    // fill in alpha for the intermediate values
+    codes[8 + 3] = 255;
+    codes[12 + 3] = (a <= b) ? 0 : 255;
+
+    // unpack the indices
+    uint8_t indices[16];
+    for (int i = 0; i < 4; ++i)
+    {
+        uint8_t* ind = indices + 4 * i;
+        uint8_t packed = bytes[4 + i];
+
+        // GCN: indices reversed
+        ind[3] = packed & 0x3;
+        ind[2] = (packed >> 2) & 0x3;
+        ind[1] = (packed >> 4) & 0x3;
+        ind[0] = (packed >> 6) & 0x3;
+    }
+
+    // store out the colours
+    for(int y = 0; y < 4; y++)
+    for (int x = 0; x < 4; x++)
+    {
+        uint8_t offset = 4 * indices[y*4+x];
+        for (int j = 0; j < 4; ++j)
+        {
+            rgba[4 * ((y * texWidth + x) ) + (j)] = codes[offset + j];//+ (i - 8 < 0 ? 0 : 128)
+        }// - i % 4
+    }
+}
+
+
+
+
+
+
+
+
 void loadTXTR(std::vector<char> rawFile, PrimeAssetID AssetID)
 {
     TXTRMap[AssetID].imageFormat = 0xBAD0DADA;
@@ -446,6 +537,78 @@ void loadTXTR(std::vector<char> rawFile, PrimeAssetID AssetID)
     TXTRMap[AssetID].mipMapCount = swap_endian<int32_t>(TXTRMap[AssetID].mipMapCount);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(TXTRMap[AssetID].mipMapCount)) << "] mipmap count:" << std::dec << TXTRMap[AssetID].mipMapCount << std::endl;
     subGetLoc += sizeof(TXTRMap[AssetID].mipMapCount);
+
+    int HBlocks = (TXTRMap[AssetID].imageWidth + 8 - 1) / 8;
+    int VBlocks = (TXTRMap[AssetID].imageHeight + 8 - 1) / 8;
+
+
+    int HBlocksm1 = (TXTRMap[AssetID].imageWidth / 2 + 8 - 1) / 8;
+    int VBlocksm1 = (TXTRMap[AssetID].imageHeight / 2 + 8 - 1) / 8;
+    int HBlocksm2 = (TXTRMap[AssetID].imageWidth / 4 + 8 - 1) / 8;
+    int VBlocksm2 = (TXTRMap[AssetID].imageHeight / 4 + 8 - 1) / 8;
+    int HBlocksm3 = (TXTRMap[AssetID].imageWidth / 8 + 8 - 1) / 8;
+    int VBlocksm3 = (TXTRMap[AssetID].imageHeight / 8 + 8 - 1) / 8;
+    int numblocks = HBlocks * VBlocks;
+
+    int blockSize = 32;
+
+    int imageSize = numblocks * blockSize;
+
+    std::cout << "texel data size: " << (rawFile.size() - subGetLoc) / 32 << std::endl;
+    std::cout << "texel data size (predicted): " << imageSize / 32 << std::endl;
+
+    TXTRMap[AssetID].PCpixels.resize(TXTRMap[AssetID].imageWidth * TXTRMap[AssetID].imageHeight * 4);
+
+    for (int y = 0; y < TXTRMap[AssetID].imageHeight; y++)
+    {
+        for (int x = 0; x < TXTRMap[AssetID].imageWidth; x++)
+        {
+            TXTRMap[AssetID].PCpixels[(TXTRMap[AssetID].imageWidth * y + x) * 4 + 0] = (x+1) % 16 < 2 || (y+1) % 16 < 2 ? 0 : 255;
+            TXTRMap[AssetID].PCpixels[(TXTRMap[AssetID].imageWidth * y + x) * 4 + 1] = (x+1) % 16 < 2 || (y+1) % 16 < 2 ? 255 : 0;
+            TXTRMap[AssetID].PCpixels[(TXTRMap[AssetID].imageWidth * y + x) * 4 + 2] = 0;
+            TXTRMap[AssetID].PCpixels[(TXTRMap[AssetID].imageWidth * y + x) * 4 + 3] = 0xff;
+        }
+    }
+    
+    //now that everything is red, let's fill in the stuff we know
+    //uint16_t color565_1 = rawFile[subGetLoc++];
+    //uint16_t color565_2 = rawFile[subGetLoc++];
+    //
+    //unsigned color1_r = (color565_1 & 0xF800) >> 11;
+    //unsigned color1_g = (color565_1 & 0x07E0) >> 5;
+    //unsigned color1_b = (color565_1 & 0x001F);
+    //
+    //unsigned color2_r = (color565_2 & 0xF800) >> 11;
+    //unsigned color2_g = (color565_2 & 0x07E0) >> 5;
+    //unsigned color2_b = (color565_2 & 0x001F);
+    //
+    //color1_r = (color1_r * 255) / 31;
+    //color1_g = (color1_g * 255) / 63;
+    //color1_b = (color1_b * 255) / 31;
+    //
+    //color2_r = (color2_r * 255) / 31;
+    //color2_g = (color2_g * 255) / 63;
+    //color2_b = (color2_b * 255) / 31;
+
+    for (int y = 0; y < TXTRMap[AssetID].imageHeight; y+=8)
+    {
+        for (int x = 0; x < TXTRMap[AssetID].imageWidth; x += 8)
+        {
+            //decode full dxt1 block, (4 sub blocks)
+            DecompressColourGCN(TXTRMap[AssetID].imageWidth, &TXTRMap[AssetID].PCpixels.data()[4 * (y * TXTRMap[AssetID].imageWidth + x)], &rawFile[subGetLoc]);
+            subGetLoc += 8;
+            DecompressColourGCN(TXTRMap[AssetID].imageWidth, &TXTRMap[AssetID].PCpixels.data()[4 * ((y) * TXTRMap[AssetID].imageWidth + (x + 4))], &rawFile[subGetLoc]);
+            subGetLoc += 8;
+            DecompressColourGCN(TXTRMap[AssetID].imageWidth, &TXTRMap[AssetID].PCpixels.data()[4 * ((y + 4) * TXTRMap[AssetID].imageWidth + (x))], &rawFile[subGetLoc]);
+            subGetLoc += 8;
+            DecompressColourGCN(TXTRMap[AssetID].imageWidth, &TXTRMap[AssetID].PCpixels.data()[4 * ((y+4) * TXTRMap[AssetID].imageWidth + (x+4))], &rawFile[subGetLoc]);
+            subGetLoc += 8;
+        }
+    
+    }
+
+
+
 }
 void loadMREA(std::vector<char> rawFile, PrimeAssetID AssetID)
 {
@@ -1309,22 +1472,44 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
             uint16_t uvc1_index1before = 0;
             uint16_t uvc1_index2before = 0;
             uint16_t uvc1_indexwaybefore = 0;
+
             uint16_t uvc2_index1before = 0;
             uint16_t uvc2_index2before = 0;
             uint16_t uvc2_indexwaybefore = 0;
+
+            uint16_t uvc3_index1before = 0;
+            uint16_t uvc3_index2before = 0;
+            uint16_t uvc3_indexwaybefore = 0;
+
+            uint16_t uvc4_index1before = 0;
+            uint16_t uvc4_index2before = 0;
+            uint16_t uvc4_indexwaybefore = 0;
+
+            uint16_t uvc5_index1before = 0;
+            uint16_t uvc5_index2before = 0;
+            uint16_t uvc5_indexwaybefore = 0;
+
+            uint16_t uvc6_index1before = 0;
+            uint16_t uvc6_index2before = 0;
+            uint16_t uvc6_indexwaybefore = 0;
+
+            uint16_t uvc7_index1before = 0;
+            uint16_t uvc7_index2before = 0;
+            uint16_t uvc7_indexwaybefore = 0;
+
             for (int ijk = 0; ijk < CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount; ijk++)
             {
 
 
-                uint16_t pos_vIndex;
-                uint16_t nml_vIndex;
-                uint16_t uvc1_vIndex;
-                uint16_t uvc2_vIndex;
-                uint16_t uvc3_vIndex;
-                uint16_t uvc4_vIndex;
-                uint16_t uvc5_vIndex;
-                uint16_t uvc6_vIndex;
-                uint16_t uvc7_vIndex;
+                uint16_t pos_vIndex=0;
+                uint16_t nml_vIndex=0;
+                uint16_t uvc1_vIndex=0;
+                uint16_t uvc2_vIndex=0;
+                uint16_t uvc3_vIndex=0;
+                uint16_t uvc4_vIndex=0;
+                uint16_t uvc5_vIndex=0;
+                uint16_t uvc6_vIndex=0;
+                uint16_t uvc7_vIndex=0;
 
 
 
@@ -1332,10 +1517,6 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                     memcpy(&pos_vIndex, &rawFile[subGetLoc], sizeof(pos_vIndex));
                     pos_vIndex = swap_endian<uint16_t>(pos_vIndex);
                     subGetLoc += sizeof(pos_vIndex);
-                }
-                else
-                {
-                    std::cout << "epic failure" << std::endl;
                 }
                 if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0xC) > 0) {
                     memcpy(&nml_vIndex, &rawFile[subGetLoc], sizeof(nml_vIndex));
@@ -1359,10 +1540,40 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                     uvc3_vIndex = swap_endian<uint16_t>(uvc3_vIndex);
                     subGetLoc += sizeof(uvc3_vIndex);
                 }
+                if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0xC000) > 0)
+                {
+                    memcpy(&uvc4_vIndex, &rawFile[subGetLoc], sizeof(uvc4_vIndex));
+                    uvc4_vIndex = swap_endian<uint16_t>(uvc4_vIndex);
+                    subGetLoc += sizeof(uvc4_vIndex);
+                }
+                if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x30000) > 0)
+                {
+                    memcpy(&uvc5_vIndex, &rawFile[subGetLoc], sizeof(uvc5_vIndex));
+                    uvc5_vIndex = swap_endian<uint16_t>(uvc5_vIndex);
+                    subGetLoc += sizeof(uvc5_vIndex);
+                }
+                if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0xC0000) > 0)
+                {
+                    memcpy(&uvc6_vIndex, &rawFile[subGetLoc], sizeof(uvc6_vIndex));
+                    uvc6_vIndex = swap_endian<uint16_t>(uvc6_vIndex);
+                    subGetLoc += sizeof(uvc6_vIndex);
+                }
+                if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x300000) > 0)
+                {
+                    memcpy(&uvc7_vIndex, &rawFile[subGetLoc], sizeof(uvc7_vIndex));
+                    uvc7_vIndex = swap_endian<uint16_t>(uvc7_vIndex);
+                    subGetLoc += sizeof(uvc7_vIndex);
+                }
                 if (ijk == 0) {
                     pos_indexwaybefore = pos_vIndex;
                     nml_indexwaybefore = nml_vIndex;
                     uvc1_indexwaybefore = uvc1_vIndex;
+                    uvc2_indexwaybefore = uvc2_vIndex;
+                    uvc3_indexwaybefore = uvc3_vIndex;
+                    uvc4_indexwaybefore = uvc4_vIndex;
+                    uvc5_indexwaybefore = uvc5_vIndex;
+                    uvc6_indexwaybefore = uvc6_vIndex;
+                    uvc7_indexwaybefore = uvc7_vIndex;
                 }
                 //std::cout << "vertex " << ijk << " position: " <<
                 //    CMDLMap[AssetID].geometry.vertexCoords.data()[vIndex * 3 + 0] << ", " <<
@@ -1449,8 +1660,18 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                 nml_index1before = nml_vIndex;
                 uvc1_index2before = uvc1_index1before;
                 uvc1_index1before = uvc1_vIndex;
-                //uvc2_index2before = uvc2_index1before;
-                //uvc2_index1before = uvc2_vIndex;
+                uvc2_index2before = uvc2_index1before;
+                uvc2_index1before = uvc2_vIndex;
+                uvc3_index2before = uvc3_index1before;
+                uvc3_index1before = uvc3_vIndex;
+                uvc4_index2before = uvc4_index1before;
+                uvc4_index1before = uvc4_vIndex;
+                uvc5_index2before = uvc5_index1before;
+                uvc5_index1before = uvc5_vIndex;
+                uvc6_index2before = uvc6_index1before;
+                uvc6_index1before = uvc6_vIndex;
+                uvc7_index2before = uvc7_index1before;
+                uvc7_index1before = uvc7_vIndex;
 
 
                 //if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0xC) > 0)

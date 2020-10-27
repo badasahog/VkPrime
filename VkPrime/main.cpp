@@ -11,8 +11,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/hash.hpp>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
+//#define STB_IMAGE_IMPLEMENTATION
+//#include <stb_image.h>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
@@ -36,7 +36,7 @@
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
-
+uint32_t tempTXTRID;
 //const std::string MODEL_PATH = "";
 const std::vector<std::string> images = {
     "textures/TXTR_8033012D.png",
@@ -307,6 +307,7 @@ private:
     }
 
     void initVulkan() {
+        loadScene();
         createInstance();
         setupDebugMessenger();
         createSurface();
@@ -324,7 +325,6 @@ private:
         createTextureImage();
         createTextureImageView();
         createTextureSampler();
-        loadScene();
         createVertexBuffer();
         createIndexBuffer();
         createUniformBuffers();
@@ -968,9 +968,15 @@ private:
         imageStuffs.resize(images.size());
         for (int x = 0; x < images.size(); x++)
         {
-            int texWidth, texHeight, texChannels;
-            stbi_uc* pixels = stbi_load(images.at(x).c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+            
+            //unsigned char* pixels = (TXTRMap[CMDLMap[0x729EA8BA].materialSets[0].textureFileIDs[0]].PCpixels.data());
+            unsigned char* pixels = (TXTRMap[tempTXTRID].PCpixels.data());
+
+            int texWidth= TXTRMap[tempTXTRID].imageWidth, texHeight=TXTRMap[tempTXTRID].imageHeight, texChannels;
+            
             VkDeviceSize imageSize = texWidth * texHeight * 4;
+            
+            
             imageStuffs.at(x).mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
 
             if (!pixels) {
@@ -986,7 +992,7 @@ private:
             memcpy(data, pixels, static_cast<size_t>(imageSize));
             vkUnmapMemory(device, stagingBufferMemory);
 
-            stbi_image_free(pixels);
+            //stbi_image_free(pixels);
 
             createImage(texWidth, texHeight, imageStuffs.at(x).mipLevels, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, imageStuffs.at(x).textureImage, imageStuffs.at(x).textureImageMemory);
 
@@ -1265,15 +1271,32 @@ private:
         //loadPak("Metroid2.pak");
 
         //investigate cmdl: 0xEC81CD52
-        //random bea thing: 0x729EA8BA
-        //door: 0xD3D3AB81
+        //random bea thing: 0x729EA8BA (working)
+        //door: 0xD3D3AB81 (working)
+        //thorns: 0x072DD016 (working)
+        //artifact door: 0x2C53ADCC (not working)
+        //breakable wall: 0x2E941B92 (not working)
+        //monster hand: 0xD54C7055 (not working)
+        //eyeball: 0x88A3396A (working)
         //mlvl: 0x83F6FF6F
         //mlvl skybox cmdl: 0x817968F9
         //strg: 0x1A626AAC
         //STRG strg = *loadSTRG(0x1A626AAC, "Metroid2.pak");
-        CMDL cmdl = *loadCMDL(0x729EA8BA, "Metroid2.pak");
 
-        TXTR txtr = *loadTXTR(cmdl.materialSets[0].textureFileIDs[0],"Metroid2.pak");
+
+        //images for testing on:
+        //0xAD4ED949
+        //0xB22871B2
+        //0x955C61A9
+        //0x0CD5FA2F
+
+
+        //giant monster cmdl (Metroid3.pak)
+        //0x07D51E01
+        CMDL cmdl = *loadCMDL(0x88A3396A, "Metroid2.pak");
+        tempTXTRID = cmdl.materialSets[0].textureFileIDs[0];
+        //TXTR txtr = *loadTXTR(cmdl.materialSets[0].textureFileIDs[0],"Metroid2.pak");
+        TXTR txtr = *loadTXTR(tempTXTRID, "Metroid2.pak");
         //MLVL mlvl = *loadMLVL(0x83F6FF6F, "Metroid2.pak");
         //
         //loadSTRG(mlvl.worldNameID,"Metroid2.pak");
