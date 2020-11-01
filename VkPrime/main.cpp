@@ -1,4 +1,11 @@
+#define _CRTDBG_MAP_ALLOC
+#include <cstdlib>
+#include <crtdbg.h>
 
+#ifdef _DEBUG
+#define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
+#define DBG_NEW new
+#endif
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -10,14 +17,12 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/hash.hpp>
 
-
 #include <iostream>
 #include <stdexcept>
 #include <algorithm>
 #include <chrono>
 #include <vector>
 #include <cstring>
-#include <cstdlib>
 #include <cstdint>
 #include <array>
 #include <optional>
@@ -1291,6 +1296,8 @@ private:
         //slug: 0x19A32D30 (working)
         //horn: 0x55BAB970 (working)
         //bolt: 0xBFE4DAA0 (working)
+        //giant boss: 0xEC81CD52 (works sometimes)
+        //grump: 0x00576D37
         //mlvl: 0x83F6FF6F
         //mlvl skybox cmdl: 0x817968F9
         //strg: 0x1A626AAC
@@ -1306,7 +1313,7 @@ private:
 
         //giant monster cmdl (Metroid3.pak)
         //0x07D51E01
-        CMDL cmdl = *loadCMDL(0x6022F0CB, "Metroid2.pak");
+        CMDL cmdl = *loadCMDL(0xEC81CD52, "Metroid2.pak");
         tempTXTRID = cmdl.materialSets[0].textureFileIDs[0];
         TXTR txtr = *loadTXTR(tempTXTRID, "Metroid2.pak");
         //MLVL mlvl = *loadMLVL(0x83F6FF6F, "Metroid2.pak");

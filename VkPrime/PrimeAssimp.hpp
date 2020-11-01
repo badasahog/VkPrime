@@ -996,6 +996,9 @@ void loadSTRG(std::vector<char> rawFile, PrimeAssetID AssetID)
 }
 void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
 {
+
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+
     CMDLMap[AssetID].magic = 0xbad0dada;
     uint64_t subGetLoc = 0;
     memcpy(&CMDLMap[AssetID].magic, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].magic));
@@ -1342,7 +1345,7 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
     upperGetLoc += CMDLMap[AssetID].dataSectionSizes[CMDLMap[AssetID].MaterialSetCount + 5];
     subGetLoc = upperGetLoc;
     CMDLMap[AssetID].geometry.surfaces.resize(CMDLMap[AssetID].geometry.surfaceCount);
-
+    _CrtDumpMemoryLeaks();
     //loop through each surface
     for (int surfaceNum = 0; surfaceNum < CMDLMap[AssetID].geometry.surfaceCount; surfaceNum++)
     {
@@ -1724,7 +1727,7 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
             //0xC0000   texture 5
             //0x30000   texture 6
             std::cout << (CMDLMap[AssetID].geometry.surfaceOffsets[surfaceNum]) - (subGetLoc - upperGetLoc) << std::endl;
-            if ((CMDLMap[AssetID].geometry.surfaceOffsets[surfaceNum]) - (subGetLoc - upperGetLoc) < 20) {
+            if ((CMDLMap[AssetID].geometry.surfaceOffsets[surfaceNum]) - (subGetLoc - upperGetLoc) < 1) {
 
                 //upperGetLoc += CMDLMap[AssetID].geometry.surfaceOffsets[surfaceNum];
                 //subGetLoc = upperGetLoc;
