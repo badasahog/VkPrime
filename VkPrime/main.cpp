@@ -1,5 +1,4 @@
-#define _SILENCE_CXX17_STRSTREAM_DEPRECATION_WARNING
-#define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -13,7 +12,6 @@
 
 
 #include <iostream>
-#include <fstream>
 #include <stdexcept>
 #include <algorithm>
 #include <chrono>
@@ -1308,7 +1306,7 @@ private:
 
         //giant monster cmdl (Metroid3.pak)
         //0x07D51E01
-        CMDL cmdl = *loadCMDL(0xD3D3AB81, "Metroid2.pak");
+        CMDL cmdl = *loadCMDL(0x6022F0CB, "Metroid2.pak");
         tempTXTRID = cmdl.materialSets[0].textureFileIDs[0];
         TXTR txtr = *loadTXTR(tempTXTRID, "Metroid2.pak");
         //MLVL mlvl = *loadMLVL(0x83F6FF6F, "Metroid2.pak");
@@ -1333,11 +1331,10 @@ private:
                 v.texCoord = (
                     cmdl.geometry.floatUVCoords.size() == 0
                     ?
-                    glm::vec2(0, 0)
+                        glm::vec2(0, 0)
                     :
-                    (cmdl.geometry.floatUVCoords[cmdl.geometry.surfaces[i].uvc_indices[j]])
+                        (cmdl.geometry.floatUVCoords[cmdl.geometry.surfaces[i].uvc_indices[j]])
                     );
-
                 v.color = glm::vec3(0, 0, 0);
                 v.textureIndex = 0;
                 m.vertices.push_back(v);
@@ -1353,8 +1350,6 @@ private:
 
 
         objects.push_back(m);
-        rawFileLength = 0;
-        std::cout << rawFileLength << std::endl;
         //std::ofstream wf("objectDump.dat", std::ios::out | std::ios::binary);
         //
         //for (int i = 0; i < cmdl.geometry.vertexCoords.size(); i++) {

@@ -1,6 +1,3 @@
-#define _SILENCE_CXX17_STRSTREAM_DEPRECATION_WARNING
-#define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
-
 #pragma once
 #include <cstring>
 #include <cstdlib>
@@ -8,13 +5,11 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
-#include <strstream>
 #include <bitset>
 #include <iostream>
-#include <fstream>
 #include <stdexcept>
-#include<iostream>
-#include<fstream>
+#include <iostream>
+#include <fstream>
 #include <zlib.h>
 typedef uint32_t PrimeAssetID;
 uint32_t rawFileLength;
@@ -1728,40 +1723,44 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
             //0x30000   texture 4
             //0xC0000   texture 5
             //0x30000   texture 6
-
-
-            // 
-
-            if (CMDLMap[AssetID].geometry.surfaceOffsets[surfaceNum] < (subGetLoc - upperGetLoc) + 2 * sizeof(uint16_t)) {
+            std::cout << (CMDLMap[AssetID].geometry.surfaceOffsets[surfaceNum]) - (subGetLoc - upperGetLoc) << std::endl;
+            if ((CMDLMap[AssetID].geometry.surfaceOffsets[surfaceNum]) - (subGetLoc - upperGetLoc) < 20) {
 
                 //upperGetLoc += CMDLMap[AssetID].geometry.surfaceOffsets[surfaceNum];
                 //subGetLoc = upperGetLoc;
                 //subGetLoc = upperGetLoc+ CMDLMap[AssetID].geometry.surfaceOffsets[surfaceNum]+1;
                 std::cout << "TRIGGERED TRIGGERED TRIGGERED" << std::endl;
                 //TODO: still needs to jump to the start of the next section!
+                //if (surfaceNum>0)
+                subGetLoc = upperGetLoc + CMDLMap[AssetID].geometry.surfaceOffsets[surfaceNum];
                 break;
 
             }
 
             memcpy(&CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags));
             //std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(GXFlags)) << "] GXFlags:" << GXFlags << std::dec << std::endl;
-
+            
             subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags);
+
+
+            if (CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags==0) {
+
+                //upperGetLoc += CMDLMap[AssetID].geometry.surfaceOffsets[surfaceNum];
+                //subGetLoc = upperGetLoc;
+                //subGetLoc = upperGetLoc+ CMDLMap[AssetID].geometry.surfaceOffsets[surfaceNum]+1;
+                std::cout << "TRIGGERED TRIGGERED TRIGGERED" << std::endl;
+                //TODO: still needs to jump to the start of the next section!
+                //if (surfaceNum>0)
+                subGetLoc = upperGetLoc + CMDLMap[AssetID].geometry.surfaceOffsets[surfaceNum];
+                break;
+
+            }
+
+
         }
-        break;
+        //todo: temp
+        //break;
     }
-
-    //m.startIndex = indices.size();
-    //m.vertOffset = vertices.size();
-    //
-    //vertices.insert(vertices.end(), m.vertices.begin(), m.vertices.end());
-    //indices.insert(indices.end(), m.indices.begin(), m.indices.end());
-    //
-    //m.num_indices = indices.size() - m.startIndex;
-    //objects.push_back(m);
-
-    //TODO: temporary:
-    //return;
 }
 
 void loadPak(std::string filename)
