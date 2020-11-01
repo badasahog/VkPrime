@@ -11,11 +11,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/hash.hpp>
 
-//#define STB_IMAGE_IMPLEMENTATION
-//#include <stb_image.h>
-
-#define TINYOBJLOADER_IMPLEMENTATION
-#include <tiny_obj_loader.h>
 
 #include <iostream>
 #include <fstream>
@@ -30,7 +25,6 @@
 #include <optional>
 #include <set>
 #include <unordered_map>
-#include <strstream>
 
 #include "PrimeAssimp.hpp"
 
@@ -968,15 +962,15 @@ private:
         imageStuffs.resize(images.size());
         for (int x = 0; x < images.size(); x++)
         {
-            
+
             //unsigned char* pixels = (TXTRMap[CMDLMap[0x729EA8BA].materialSets[0].textureFileIDs[0]].PCpixels.data());
             unsigned char* pixels = (TXTRMap[tempTXTRID].PCpixels.data());
 
-            int texWidth= TXTRMap[tempTXTRID].imageWidth, texHeight=TXTRMap[tempTXTRID].imageHeight, texChannels;
-            
+            int texWidth = TXTRMap[tempTXTRID].imageWidth, texHeight = TXTRMap[tempTXTRID].imageHeight, texChannels;
+
             VkDeviceSize imageSize = texWidth * texHeight * 4;
-            
-            
+
+
             imageStuffs.at(x).mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
 
             if (!pixels) {
@@ -1271,13 +1265,34 @@ private:
         //loadPak("Metroid2.pak");
 
         //investigate cmdl: 0xEC81CD52
-        //random bea thing: 0x729EA8BA (working)
+        //wasp: 0x729EA8BA (working)
         //door: 0xD3D3AB81 (working)
         //thorns: 0x072DD016 (working)
         //artifact door: 0x2C53ADCC (not working)
         //breakable wall: 0x2E941B92 (not working)
         //monster hand: 0xD54C7055 (not working)
         //eyeball: 0x88A3396A (working)
+        //bea: 0x2770FEDC (working, broken texture)
+        //wasp hive: 0x6022F0CB (not working)
+        //mouth hatch: 0x6A8E7A04 (not working)
+        //rock helmet: 0x0EA00982 (not working)
+        //goat skull: 0xCA89960D (not working)
+        //soar thumb: 0xA5E493F4 (not working)
+        //morph ball hatch: 0x73F36E22 (not working)
+        //seesaw: 0x3431D141 (not working)
+        //wall: 0x5E0270F9 (not working)
+        //slug: 0xFE6F5D43 (not working)
+        //beetle: 0xB3574D33 (working)
+        //wall eyeball: 0x9527B462 (working)
+        //spore: 0x04A61D88 (working)
+        //puffy hand: 0xEDC82CFD (not working)
+        //lump: 0x469B71A0 (working)
+        //egg: 0xC6D70851 (working)
+        //small door: 0xE6C4B13E (not working)
+        //telletubby head: 0x42CDB236 (not working)
+        //slug: 0x19A32D30 (working)
+        //horn: 0x55BAB970 (working)
+        //bolt: 0xBFE4DAA0 (working)
         //mlvl: 0x83F6FF6F
         //mlvl skybox cmdl: 0x817968F9
         //strg: 0x1A626AAC
@@ -1293,9 +1308,8 @@ private:
 
         //giant monster cmdl (Metroid3.pak)
         //0x07D51E01
-        CMDL cmdl = *loadCMDL(0x88A3396A, "Metroid2.pak");
+        CMDL cmdl = *loadCMDL(0xD3D3AB81, "Metroid2.pak");
         tempTXTRID = cmdl.materialSets[0].textureFileIDs[0];
-        //TXTR txtr = *loadTXTR(cmdl.materialSets[0].textureFileIDs[0],"Metroid2.pak");
         TXTR txtr = *loadTXTR(tempTXTRID, "Metroid2.pak");
         //MLVL mlvl = *loadMLVL(0x83F6FF6F, "Metroid2.pak");
         //
@@ -1316,7 +1330,13 @@ private:
                 Vertex v;
                 v.pos = cmdl.geometry.vertexCoords[cmdl.geometry.surfaces[i].pos_indices[j]];
 
-                v.texCoord = cmdl.geometry.floatUVCoords[cmdl.geometry.surfaces[i].uvc_indices[j]];
+                v.texCoord = (
+                    cmdl.geometry.floatUVCoords.size() == 0
+                    ?
+                    glm::vec2(0, 0)
+                    :
+                    (cmdl.geometry.floatUVCoords[cmdl.geometry.surfaces[i].uvc_indices[j]])
+                    );
 
                 v.color = glm::vec3(0, 0, 0);
                 v.textureIndex = 0;
@@ -1335,45 +1355,45 @@ private:
         objects.push_back(m);
         rawFileLength = 0;
         std::cout << rawFileLength << std::endl;
-        std::ofstream wf("objectDump.dat", std::ios::out | std::ios::binary);
-
-        for (int i = 0; i < cmdl.geometry.vertexCoords.size(); i++) {
-            std::string ln = "v ";
-            ln += std::to_string(cmdl.geometry.vertexCoords[i].x);
-            ln += " ";
-            ln += std::to_string(cmdl.geometry.vertexCoords[i].y);
-            ln += " ";
-            ln += std::to_string(cmdl.geometry.vertexCoords[i].z);
-            ln += "\n";
-            wf.write(ln.data(), ln.length());
-        }
-        for (int i = 0; i < cmdl.geometry.floatUVCoords.size(); i++) {
-            std::string ln = "vt ";
-            ln += std::to_string(cmdl.geometry.floatUVCoords[i].x);
-            ln += " ";
-            ln += std::to_string(cmdl.geometry.floatUVCoords[i].y);
-            ln += "\n";
-            wf.write(ln.data(), ln.length());
-        }
-        for (int i = 0; i < cmdl.geometry.normals.size(); i++) {
-            std::string ln = "vn ";
-            ln += std::to_string(cmdl.geometry.normals[i].x);
-            ln += " ";
-            ln += std::to_string(cmdl.geometry.normals[i].y);
-            ln += " ";
-            ln += std::to_string(cmdl.geometry.normals[i].z);
-            ln += "\n";
-            wf.write(ln.data(), ln.length());
-        }
-        for (int i = 0; i < cmdl.geometry.surfaces[0].pos_indices.size(); i+=3)
-        {
-            std::string ln = "f ";
-            ln += std::to_string(cmdl.geometry.surfaces[0].pos_indices[i + 0]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].uvc_indices[i + 0]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].nml_indices[i + 0]+1)+ " ";
-            ln += std::to_string(cmdl.geometry.surfaces[0].pos_indices[i + 1]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].uvc_indices[i + 1]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].nml_indices[i + 1]+1)+ " ";
-            ln += std::to_string(cmdl.geometry.surfaces[0].pos_indices[i + 2]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].uvc_indices[i + 2]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].nml_indices[i + 2]+1)+ "\n";
-            wf.write(ln.data(), ln.length());
-        }
-        wf.close();
+        //std::ofstream wf("objectDump.dat", std::ios::out | std::ios::binary);
+        //
+        //for (int i = 0; i < cmdl.geometry.vertexCoords.size(); i++) {
+        //    std::string ln = "v ";
+        //    ln += std::to_string(cmdl.geometry.vertexCoords[i].x);
+        //    ln += " ";
+        //    ln += std::to_string(cmdl.geometry.vertexCoords[i].y);
+        //    ln += " ";
+        //    ln += std::to_string(cmdl.geometry.vertexCoords[i].z);
+        //    ln += "\n";
+        //    wf.write(ln.data(), ln.length());
+        //}
+        //for (int i = 0; i < cmdl.geometry.floatUVCoords.size(); i++) {
+        //    std::string ln = "vt ";
+        //    ln += std::to_string(cmdl.geometry.floatUVCoords[i].x);
+        //    ln += " ";
+        //    ln += std::to_string(cmdl.geometry.floatUVCoords[i].y);
+        //    ln += "\n";
+        //    wf.write(ln.data(), ln.length());
+        //}
+        //for (int i = 0; i < cmdl.geometry.normals.size(); i++) {
+        //    std::string ln = "vn ";
+        //    ln += std::to_string(cmdl.geometry.normals[i].x);
+        //    ln += " ";
+        //    ln += std::to_string(cmdl.geometry.normals[i].y);
+        //    ln += " ";
+        //    ln += std::to_string(cmdl.geometry.normals[i].z);
+        //    ln += "\n";
+        //    wf.write(ln.data(), ln.length());
+        //}
+        //for (int i = 0; i < cmdl.geometry.surfaces[0].pos_indices.size(); i+=3)
+        //{
+        //    std::string ln = "f ";
+        //    ln += std::to_string(cmdl.geometry.surfaces[0].pos_indices[i + 0]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].uvc_indices[i + 0]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].nml_indices[i + 0]+1)+ " ";
+        //    ln += std::to_string(cmdl.geometry.surfaces[0].pos_indices[i + 1]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].uvc_indices[i + 1]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].nml_indices[i + 1]+1)+ " ";
+        //    ln += std::to_string(cmdl.geometry.surfaces[0].pos_indices[i + 2]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].uvc_indices[i + 2]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].nml_indices[i + 2]+1)+ "\n";
+        //    wf.write(ln.data(), ln.length());
+        //}
+        //wf.close();
 
 
 
@@ -1406,109 +1426,6 @@ private:
     //        objects.push_back(m);
     //    }
 
-    }
-    void loadModel(Mesh* m) {
-        tinyobj::attrib_t attrib;
-        //std::vector<tinyobj::shape_t> shapes;
-        //std::vector<tinyobj::material_t> materials;
-        //std::string warn, err;
-
-        //if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, m->filePath.c_str())) {
-         //   throw std::runtime_error(warn + err);
-        //}
-
-
-
-        std::ifstream infile(m->filePath);
-
-
-
-
-        std::unordered_map<Vertex, uint32_t> uniqueVertices{};
-        std::vector<double> VXS;
-        std::vector<double> VYS;
-        std::vector<double> VZS;
-        std::vector<double> TXS;
-        std::vector<double> TYS;
-        std::vector<uint8_t> TIDX;
-
-        while (!infile.eof())
-        {
-            char line[128];
-            infile.getline(line, 128);
-
-            std::strstream s;
-            s << line;
-            char junk;
-            if (line[0] == 'v' && line[1] == 't')
-            {
-                float a, b;
-                s >> junk >> a >> b;
-                TXS.push_back(a);
-                TYS.push_back(b);
-            }
-            else if (line[0] == 'v' && line[1] == 'n') {}//I don't care about normals
-            else if (line[0] == 'v') {
-                float a, b, c;
-
-                s >> junk >> a >> b >> c;
-
-                VXS.push_back(a);
-                VYS.push_back(b);
-                VZS.push_back(c);
-            }
-            else if (line[0] == 'f')
-            {
-                //std::cout << VXS.size() << std::endl;
-                //std::cout << VYS.size() << std::endl;
-                //std::cout << VZS.size() << std::endl;
-                Vertex vertex{};
-
-                int v[3], t[3], n[3];
-                int ti;
-                s >> junk >> v[0] >> t[0] >> n[0] >> v[1] >> t[1] >> n[1] >> v[2] >> t[2] >> n[2] >> ti;
-
-                for (size_t vnum = 0; vnum < 3; vnum++) {
-                    // access to vertex
-                    //tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
-                    glm::vec3 inputPosition = glm::vec3(
-                        VXS[v[vnum] - 1],
-                        VYS[v[vnum] - 1],
-                        VZS[v[vnum] - 1]
-                    );
-                    if (VXS.size() == 61)
-                        std::cout << VXS[v[vnum] - 1] << ", " << VYS[v[vnum] - 1] << ", " << VZS[v[vnum] - 1] << std::endl;
-                    // Apply rotation to correct for incorrect Blender model export
-                    glm::mat4 rotmat = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-
-                    // Define per object offsets
-                    glm::vec3 offset = glm::vec3(m->x, m->y, m->z);
-
-
-
-                    // Final vertex position
-                    vertex.pos = glm::vec3(rotmat * glm::vec4(inputPosition, 1.0)) + offset;
-
-                    vertex.textureIndex = ti;
-                    //std::cout << "vertex.textureIndex = " << vertex.textureIndex << std::endl;
-
-                    vertex.texCoord = {
-                        TXS[t[vnum] - 1],
-                        1.0f - TYS[t[vnum] - 1]
-                    };
-                    vertex.color = { 1.0f, 1.0f, 1.0f };
-
-                    if (uniqueVertices.count(vertex) == 0) {
-                        uniqueVertices[vertex] = static_cast<uint32_t>(m->vertices.size());
-                        m->vertices.push_back(vertex);
-                    }
-
-                    m->indices.push_back(uniqueVertices[vertex]);
-                }
-
-
-            }
-        }
     }
 
     void createVertexBuffer() {
@@ -2112,7 +2029,7 @@ private:
 
 int main() {
     HelloTriangleApplication app;
-    
+
 
     try {
         app.run();
