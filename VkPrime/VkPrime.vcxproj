@@ -95,14 +95,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glm;C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\include;C:\VulkanSDK\1.2.135.0\Include;C:\VulkanSDK\1.2.135.0\Include\stb-master;C:\Users\yair\Documents\Visual Studio 2019\Libraries\tinyobjloader-master;C:\VulkanSDK\1.2.135.0\Include\miniz\trunk;C:\Users\yair\Documents\Visual Studio 2019\Libraries\zlib-1.2.11;C:\Users\yair\Documents\Visual Studio 2019\Libraries\libSquish-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glm;C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\include;C:\VulkanSDK\1.2.135.0\Include;C:\VulkanSDK\1.2.135.0\Include\miniz\trunk;C:\Users\yair\Documents\Visual Studio 2019\Libraries\zlib-1.2.11;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;squish.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\lib-vc2019;C:\VulkanSDK\1.2.135.0\Lib;C:\Users\yair\Documents\Visual Studio 2019\Libraries\libSquish-master\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\lib-vc2019;C:\VulkanSDK\1.2.135.0\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -113,7 +113,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glm;C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\include;C:\VulkanSDK\1.2.135.0\Include;C:\VulkanSDK\1.2.135.0\Include\stb-master;C:\Users\yair\Documents\Visual Studio 2019\Libraries\tinyobjloader-master;C:\VulkanSDK\1.2.135.0\Include\miniz\trunk;C:\Users\yair\Documents\Visual Studio 2019\Libraries\zlib-1.2.11;C:\Users\yair\Documents\Visual Studio 2019\Libraries\libSquish-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glm;C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\include;C:\VulkanSDK\1.2.135.0\Include;C:\VulkanSDK\1.2.135.0\Include\miniz\trunk;C:\Users\yair\Documents\Visual Studio 2019\Libraries\zlib-1.2.11;C:\Users\yair\Documents\Visual Studio 2019\Libraries\libSquish-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -121,8 +121,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;squish.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\lib-vc2019;C:\VulkanSDK\1.2.135.0\Lib;C:\Users\yair\Documents\Visual Studio 2019\Libraries\libSquish-master\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\lib-vc2019;C:\VulkanSDK\1.2.135.0\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -131,14 +131,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glm;C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\include;C:\VulkanSDK\1.2.135.0\Include;C:\VulkanSDK\1.2.135.0\Include\stb-master;C:\Users\yair\Documents\Visual Studio 2019\Libraries\tinyobjloader-master;C:\VulkanSDK\1.2.135.0\Include\miniz\trunk;C:\Users\yair\Documents\Visual Studio 2019\Libraries\zlib-1.2.11;C:\Users\yair\Documents\Visual Studio 2019\Libraries\libSquish-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glm;C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\include;C:\VulkanSDK\1.2.135.0\Include;C:\VulkanSDK\1.2.135.0\Include\miniz\trunk;C:\Users\yair\Documents\Visual Studio 2019\Libraries\zlib-1.2.11;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\lib-vc2019;C:\VulkanSDK\1.2.135.0\Lib;C:\Users\yair\Documents\Visual Studio 2019\Libraries\libSquish-master\Debug;C:\Users\yair\Documents\Visual Studio 2019\Libraries\libSquish-master;C:\Users\yair\Documents\Visual Studio 2019\Libraries\zlib-1.2.11\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;squish.lib;zlib.lib;zlibstatic.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\lib-vc2019;C:\VulkanSDK\1.2.135.0\Lib;C:\Users\yair\Documents\Visual Studio 2019\Libraries\libSquish-master;C:\Users\yair\Documents\Visual Studio 2019\Libraries\zlib-1.2.11\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;zlib.lib;zlibstatic.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>cd C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\shaders
@@ -156,7 +156,7 @@ C:/VulkanSDK/1.2.135.0/Bin32/glslc.exe sso_shader.frag -o sso_frag.spv</Command>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glm;C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\include;C:\VulkanSDK\1.2.135.0\Include;C:\VulkanSDK\1.2.135.0\Include\stb-master;C:\Users\yair\Documents\Visual Studio 2019\Libraries\tinyobjloader-master;C:\VulkanSDK\1.2.135.0\Include\miniz\trunk;C:\Users\yair\Documents\Visual Studio 2019\Libraries\zlib-1.2.11;C:\Users\yair\Documents\Visual Studio 2019\Libraries\libSquish-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glm;C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\include;C:\VulkanSDK\1.2.135.0\Include;C:\VulkanSDK\1.2.135.0\Include\miniz\trunk;C:\Users\yair\Documents\Visual Studio 2019\Libraries\zlib-1.2.11;C:\Users\yair\Documents\Visual Studio 2019\Libraries\libSquish-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -164,8 +164,8 @@ C:/VulkanSDK/1.2.135.0/Bin32/glslc.exe sso_shader.frag -o sso_frag.spv</Command>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\lib-vc2019;C:\VulkanSDK\1.2.135.0\Lib;C:\Users\yair\Documents\Visual Studio 2019\Libraries\libSquish-master\Debug;C:\Users\yair\Documents\Visual Studio 2019\Libraries\libSquish-master;C:\Users\yair\Documents\Visual Studio 2019\Libraries\zlib-1.2.11\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;squish.lib;zlib.lib;zlibstatic.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\lib-vc2019;C:\VulkanSDK\1.2.135.0\Lib;C:\Users\yair\Documents\Visual Studio 2019\Libraries\libSquish-master;C:\Users\yair\Documents\Visual Studio 2019\Libraries\zlib-1.2.11\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;zlib.lib;zlibstatic.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
