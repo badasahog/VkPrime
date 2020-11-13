@@ -23,6 +23,7 @@
     <ClCompile Include="PrimeAssimp.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="GXCore.hpp" />
     <ClInclude Include="PrimeAssimp.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -113,7 +114,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glm;C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\include;C:\VulkanSDK\1.2.135.0\Include;C:\VulkanSDK\1.2.135.0\Include\miniz\trunk;C:\Users\yair\Documents\Visual Studio 2019\Libraries\zlib-1.2.11;C:\Users\yair\Documents\Visual Studio 2019\Libraries\libSquish-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glm;C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\include;C:\VulkanSDK\1.2.135.0\Include;C:\VulkanSDK\1.2.135.0\Include\miniz\trunk;C:\Users\yair\Documents\Visual Studio 2019\Libraries\zlib-1.2.11;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -156,7 +157,7 @@ C:/VulkanSDK/1.2.135.0/Bin32/glslc.exe sso_shader.frag -o sso_frag.spv</Command>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glm;C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\include;C:\VulkanSDK\1.2.135.0\Include;C:\VulkanSDK\1.2.135.0\Include\miniz\trunk;C:\Users\yair\Documents\Visual Studio 2019\Libraries\zlib-1.2.11;C:\Users\yair\Documents\Visual Studio 2019\Libraries\libSquish-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\yair\Documents\Visual Studio 2019\Libraries\glm;C:\Users\yair\Documents\Visual Studio 2019\Libraries\glfw-3.3.2.bin.WIN64\include;C:\VulkanSDK\1.2.135.0\Include;C:\VulkanSDK\1.2.135.0\Include\miniz\trunk;C:\Users\yair\Documents\Visual Studio 2019\Libraries\zlib-1.2.11;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>

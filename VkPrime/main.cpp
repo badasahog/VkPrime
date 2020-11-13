@@ -33,14 +33,8 @@
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
-uint32_t tempTXTRID;
+uint32_t tempCMDLID;
 //const std::string MODEL_PATH = "";
-const std::vector<std::string> images = {
-    "textures/TXTR_8033012D.png",
-    "textures/TXTR_4E75CD72.png",
-    "textures/TXTR_E802C6C6.png",
-    "textures/TXTR_9304b76f.png",
-};
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -304,6 +298,7 @@ private:
     }
 
     void initVulkan() {
+        imageStuffs.resize(7);
         loadScene();
         createInstance();
         setupDebugMessenger();
@@ -738,7 +733,7 @@ private:
 
         VkDescriptorSetLayoutBinding samplerLayoutBinding{};
         samplerLayoutBinding.binding = 1;
-        samplerLayoutBinding.descriptorCount = images.size();
+        samplerLayoutBinding.descriptorCount = imageStuffs.size();
         samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         samplerLayoutBinding.pImmutableSamplers = nullptr;
         samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -962,14 +957,14 @@ private:
 
     void createTextureImage() {
 
-        imageStuffs.resize(images.size());
-        for (int x = 0; x < images.size(); x++)
+        imageStuffs.resize(CMDLMap[tempCMDLID].materialSets[0].textureCount);
+        for (int x = 0; x < imageStuffs.size(); x++)
         {
 
             //unsigned char* pixels = (TXTRMap[CMDLMap[0x729EA8BA].materialSets[0].textureFileIDs[0]].PCpixels.data());
-            unsigned char* pixels = (TXTRMap[tempTXTRID].PCpixels.data());
+            unsigned char* pixels = (TXTRMap[CMDLMap[tempCMDLID].materialSets[0].textureFileIDs[x]].PCpixels.data());
 
-            int texWidth = TXTRMap[tempTXTRID].imageWidth, texHeight = TXTRMap[tempTXTRID].imageHeight, texChannels;
+            int texWidth = TXTRMap[CMDLMap[tempCMDLID].materialSets[0].textureFileIDs[x]].imageWidth, texHeight = TXTRMap[CMDLMap[tempCMDLID].materialSets[0].textureFileIDs[x]].imageHeight, texChannels;
 
             VkDeviceSize imageSize = texWidth * texHeight * 4;
 
@@ -1107,12 +1102,12 @@ private:
     }
 
     void createTextureImageView() {
-        for (int x = 0; x < images.size(); x++)
+        for (int x = 0; x < imageStuffs.size(); x++)
             imageStuffs.at(x).textureImageView = createImageView(imageStuffs.at(x).textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, imageStuffs.at(x).mipLevels);
     }
 
     void createTextureSampler() {
-        for (int x = 0; x < images.size(); x++) {
+        for (int x = 0; x < imageStuffs.size(); x++) {
             VkSamplerCreateInfo samplerInfo{};
             samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
             samplerInfo.magFilter = VK_FILTER_LINEAR;
@@ -1271,14 +1266,14 @@ private:
         //wasp: 0x729EA8BA (working)
         //door: 0xD3D3AB81 (working)
         //thorns: 0x072DD016 (working)
-        //artifact door: 0x2C53ADCC (not working)
-        //breakable wall: 0x2E941B92 (not working)
-        //monster hand: 0xD54C7055 (not working)
+        //artifact door: 0x2C53ADCC (working)
+        //breakable wall: 0x2E941B92 (working)
+        //monster hand: 0xD54C7055 (working)
         //eyeball: 0x88A3396A (working)
         //bea: 0x2770FEDC (working, broken texture)
         //wasp hive: 0x6022F0CB (not working)
-        //mouth hatch: 0x6A8E7A04 (not working)
-        //rock helmet: 0x0EA00982 (not working)
+        //mouth hatch: 0x6A8E7A04 (working)
+        //rock helmet: 0x0EA00982 (working)
         //goat skull: 0xCA89960D (not working)
         //soar thumb: 0xA5E493F4 (not working)
         //morph ball hatch: 0x73F36E22 (not working)
@@ -1292,7 +1287,7 @@ private:
         //lump: 0x469B71A0 (working)
         //egg: 0xC6D70851 (working)
         //small door: 0xE6C4B13E (not working)
-        //telletubby head: 0x42CDB236 (not working)
+        //telletubby head: 0x42CDB236 (working)
         //slug: 0x19A32D30 (working)
         //horn: 0x55BAB970 (working)
         //bolt: 0xBFE4DAA0 (working)
@@ -1304,18 +1299,23 @@ private:
         //STRG strg = *loadSTRG(0x1A626AAC, "Metroid2.pak");
 
 
+        //shared:
+        //crate: 0x2A1651CD
+
         //images for testing on:
         //0xAD4ED949
         //0xB22871B2
         //0x955C61A9
         //0x0CD5FA2F
 
-
-        //giant monster cmdl (Metroid3.pak)
-        //0x07D51E01
-        CMDL cmdl = *loadCMDL(0xEC81CD52, "Metroid2.pak");
-        tempTXTRID = cmdl.materialSets[0].textureFileIDs[0];
-        TXTR txtr = *loadTXTR(tempTXTRID, "Metroid2.pak");
+        //Metroid3:
+        //giant monster: 0x07D51E01
+        //tower: 0xD1BA6B82
+        //tiny piece of phazon: 0x5F8D540D 
+        tempCMDLID = 0xD3D3AB81;
+        CMDL cmdl = *loadCMDL(tempCMDLID, "Metroid2.pak");
+        for(int i = 0;i<cmdl.materialSets[0].textureCount;i++)
+            loadTXTR(cmdl.materialSets[0].textureFileIDs[i], "Metroid2.pak");
         //MLVL mlvl = *loadMLVL(0x83F6FF6F, "Metroid2.pak");
         //
         //loadSTRG(mlvl.worldNameID,"Metroid2.pak");
@@ -1343,7 +1343,7 @@ private:
                         (cmdl.geometry.floatUVCoords[cmdl.geometry.surfaces[i].uvc_indices[j]])
                     );
                 v.color = glm::vec3(0, 0, 0);
-                v.textureIndex = 0;
+                v.textureIndex = cmdl.materialSets[0].materials[cmdl.geometry.surfaces[i].matIndex].textureFileIndices[0];
                 m.vertices.push_back(v);
                 m.indices.push_back(a);
                 a++;
@@ -1357,6 +1357,7 @@ private:
 
 
         objects.push_back(m);
+        
         //std::ofstream wf("objectDump.dat", std::ios::out | std::ios::binary);
         //
         //for (int i = 0; i < cmdl.geometry.vertexCoords.size(); i++) {
@@ -1387,46 +1388,16 @@ private:
         //    ln += "\n";
         //    wf.write(ln.data(), ln.length());
         //}
-        //for (int i = 0; i < cmdl.geometry.surfaces[0].pos_indices.size(); i+=3)
+        //for(int x = 0;x<cmdl.geometry.surfaceCount;x++)
+        //for (int i = 0; i < cmdl.geometry.surfaces[x].pos_indices.size(); i+=3)
         //{
         //    std::string ln = "f ";
-        //    ln += std::to_string(cmdl.geometry.surfaces[0].pos_indices[i + 0]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].uvc_indices[i + 0]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].nml_indices[i + 0]+1)+ " ";
-        //    ln += std::to_string(cmdl.geometry.surfaces[0].pos_indices[i + 1]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].uvc_indices[i + 1]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].nml_indices[i + 1]+1)+ " ";
-        //    ln += std::to_string(cmdl.geometry.surfaces[0].pos_indices[i + 2]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].uvc_indices[i + 2]+1) + "/" + std::to_string(cmdl.geometry.surfaces[0].nml_indices[i + 2]+1)+ "\n";
+        //    ln += std::to_string(cmdl.geometry.surfaces[x].pos_indices[i + 0]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].uvc_indices[i + 0]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].nml_indices[i + 0]+1)+ " ";
+        //    ln += std::to_string(cmdl.geometry.surfaces[x].pos_indices[i + 1]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].uvc_indices[i + 1]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].nml_indices[i + 1]+1)+ " ";
+        //    ln += std::to_string(cmdl.geometry.surfaces[x].pos_indices[i + 2]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].uvc_indices[i + 2]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].nml_indices[i + 2]+1)+ "\n";
         //    wf.write(ln.data(), ln.length());
         //}
         //wf.close();
-
-
-
-        //
-
-    //    std::ifstream f(LEVEL_PATH);
-    //    if (!f.is_open())
-    //        throw std::invalid_argument("level data not found");
-    //
-    //    while (!f.eof())
-    //    {
-    //        char line[128];
-    //        f.getline(line, 128);
-    //
-    //        std::strstream s;
-    //        s << line;
-    //        std::string objectFile;
-    //        Mesh m;
-    //        s >> m.filePath >> m.x >> m.y >> m.z;
-    //
-    //        m.filePath = "models/ssdolphin/" + m.filePath;
-    //        m.startIndex = indices.size();
-    //        m.vertOffset = vertices.size();
-    //        loadModel(&m);
-    //
-    //        indices.insert(indices.end(), m.indices.begin(), m.indices.end());
-    //        vertices.insert(vertices.end(), m.vertices.begin(), m.vertices.end());
-    //
-    //        m.num_indices = indices.size() - m.startIndex;
-    //        objects.push_back(m);
-    //    }
 
     }
 
@@ -1486,7 +1457,7 @@ private:
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
         poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChainImages.size() * images.size());
+        poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChainImages.size() * imageStuffs.size());
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -1519,8 +1490,8 @@ private:
             bufferInfo.range = sizeof(UniformBufferObject);
 
             std::vector<VkDescriptorImageInfo> imageInfo;
-            imageInfo.resize(images.size());
-            for (int x = 0; x < images.size(); x++) {
+            imageInfo.resize(imageStuffs.size());
+            for (int x = 0; x < imageStuffs.size(); x++) {
                 imageInfo[x] = {};
                 imageInfo[x].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 imageInfo[x].imageView = imageStuffs.at(x).textureImageView;
@@ -1543,7 +1514,7 @@ private:
             descriptorWrites[1].dstBinding = 1;
             descriptorWrites[1].dstArrayElement = 0;
             descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrites[1].descriptorCount = images.size();
+            descriptorWrites[1].descriptorCount = imageStuffs.size();
             descriptorWrites[1].pImageInfo = &imageInfo[0];
 
 

@@ -11,6 +11,7 @@
 #include <iostream>
 #include <fstream>
 #include <zlib.h>
+#include "GXCore.hpp"
 typedef uint32_t PrimeAssetID;
 uint32_t rawFileLength;
 template <typename T>
@@ -140,7 +141,7 @@ struct Material {
     std::vector<uint32_t> materialEndOffsets;
     std::vector<uint32_t> textureFileIndices;
     std::vector<uint32_t> konstColors;
-    std::vector<uint32_t> ColorChannelFlags;
+    uint32_t ColorChannelFlags;
     uint32_t textureCount;
     uint32_t materialCount;
     uint32_t vertexAtributeFlags;
@@ -222,11 +223,11 @@ struct TXTR
     std::vector<unsigned char> PCpixels;
 };
 
-std::unordered_map<PrimeAssetID, CMDL> CMDLMap;
-std::unordered_map<PrimeAssetID, MLVL> MLVLMap;
-std::unordered_map<PrimeAssetID, STRG> STRGMap;
-std::unordered_map<PrimeAssetID, MREA> MREAMap;
-std::unordered_map<PrimeAssetID, TXTR> TXTRMap;
+inline std::unordered_map<PrimeAssetID, CMDL> CMDLMap;
+inline std::unordered_map<PrimeAssetID, MLVL> MLVLMap;
+inline std::unordered_map<PrimeAssetID, STRG> STRGMap;
+inline std::unordered_map<PrimeAssetID, MREA> MREAMap;
+inline std::unordered_map<PrimeAssetID, TXTR> TXTRMap;
 
 CMDL* loadCMDL(PrimeAssetID assetID, std::string pakFile);
 MLVL* loadMLVL(PrimeAssetID assetID, std::string pakFile);
@@ -996,7 +997,7 @@ void loadSTRG(std::vector<char> rawFile, PrimeAssetID AssetID)
 }
 void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
 {
-
+    //malloc(999999);
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
     CMDLMap[AssetID].magic = 0xbad0dada;
@@ -1123,8 +1124,8 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                 while (TC > 100) {}
                 CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices.resize(TC);
                 std::cout << "textures:" << std::endl;
-                for (int tx = 0; tx < TC; tx += sizeof(uint32_t)) {
-                    memcpy(&(CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx]), &rawFile[subGetLoc + tx], sizeof(uint32_t));
+                for (int tx = 0; tx < TC; tx++) {
+                    memcpy(&(CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx]), &rawFile[subGetLoc + tx*sizeof(PrimeAssetID)], sizeof(PrimeAssetID));
                     CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx] = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx]);
                     //std::cout << CMDLMap[AssetID].materialSets[imat].textureFileIndices[tx] << std::endl;
                     std::cout << "\ttexture: " << std::hex << CMDLMap[AssetID].materialSets[imat].textureFileIDs[CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx]] << std::dec << std::endl;
@@ -1168,7 +1169,6 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                     }
                     subGetLoc += sizeof(KonstCount) + KonstCount * sizeof(uint32_t);
                 }
-                std::cout << "offset: " << std::hex << subGetLoc << std::dec << std::endl;
                 short blendDestFactor;
                 memcpy(&blendDestFactor, &rawFile[subGetLoc], sizeof(blendDestFactor));
                 blendDestFactor = swap_endian<short>(blendDestFactor);
@@ -1194,14 +1194,13 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                 memcpy(&(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount), &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount));
                 CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount);
                 std::cout << "color channel count: " << CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount << std::endl;
-                std::cout << "offset: " << std::hex << subGetLoc << std::dec << std::endl;
-                CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags.resize(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount);
-                for (int mc = 0; mc < CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount; mc++) {
-                    memcpy(&(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags[mc]), &rawFile[subGetLoc + sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount) + mc * sizeof(uint32_t)], sizeof(uint32_t));
-                    CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags[mc] = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags[mc]);
-                    std::cout << "color channel flags: " << CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags[mc] << std::dec << std::endl;
-                }
-                subGetLoc += sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount) + CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount * sizeof(uint32_t);
+                subGetLoc += sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount);
+
+                memcpy(&(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags), &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags));
+                CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags);
+                std::cout << "color channel flags: " << CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags << std::dec << std::endl;
+
+                subGetLoc += CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount * 4;
 
 
                 uint32_t TEVStageCount;
@@ -1209,6 +1208,286 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                 TEVStageCount = swap_endian<uint32_t>(TEVStageCount);
                 std::cout << "TEV Stage Count: " << TEVStageCount << std::endl;
                 subGetLoc += sizeof(TEVStageCount);
+
+                for (int ijk = 0; ijk < TEVStageCount; ijk++)
+                {
+                    std::cout << std::hex << "[" << subGetLoc << "] TEV stage " << std::dec << ijk << ": " << std::endl;
+                    uint32_t colorInputFlags;
+                    memcpy(&colorInputFlags, &rawFile[subGetLoc], sizeof(colorInputFlags));
+                    colorInputFlags = swap_endian<uint32_t>(colorInputFlags);
+                    std::cout << "\tColor input flags (color0): ";
+                         if ((colorInputFlags & 0x1f) == 0x0) std::cout << "Previous stage RGB"<<std::endl;
+                    else if ((colorInputFlags & 0x1f) == 0x1) std::cout << "Previous stage AAA"<<std::endl;
+                    else if ((colorInputFlags & 0x1f) == 0x2) std::cout << "Color 0 RGB"<<std::endl;
+                    else if ((colorInputFlags & 0x1f) == 0x3) std::cout << "Color 0 AAA"<<std::endl;
+                    else if ((colorInputFlags & 0x1f) == 0x4) std::cout << "Color 1 RGB"<<std::endl;
+                    else if ((colorInputFlags & 0x1f) == 0x5) std::cout << "Color 1 AAA"<<std::endl;
+                    else if ((colorInputFlags & 0x1f) == 0x6) std::cout << "Color 2 RGB"<<std::endl;
+                    else if ((colorInputFlags & 0x1f) == 0x7) std::cout << "Color 2 AAA"<<std::endl;
+                    else if ((colorInputFlags & 0x1f) == 0x8) std::cout << "Texture RGB"<<std::endl;
+                    else if ((colorInputFlags & 0x1f) == 0x9) std::cout << "Texture AAA"<<std::endl;
+                    else if ((colorInputFlags & 0x1f) == 0xa) std::cout << "Rasterized RGB"<<std::endl;
+                    else if ((colorInputFlags & 0x1f) == 0xb) std::cout << "Rasterized AAA"<<std::endl;
+                    else if ((colorInputFlags & 0x1f) == 0xc) std::cout << "One"<<std::endl;
+                    else if ((colorInputFlags & 0x1f) == 0xd) std::cout << "Half"<<std::endl;
+                    else if ((colorInputFlags & 0x1f) == 0xe) std::cout << "Konstant RGB"<<std::endl;
+                    else if ((colorInputFlags & 0x1f) == 0xf) std::cout << "Zero"<<std::endl;
+
+                    std::cout << "\tColor input flags (color1): ";
+                         if (((colorInputFlags & 0x3E0) >> 5) == 0x0) std::cout << "Previous stage RGB" << std::endl;
+                    else if (((colorInputFlags & 0x3E0) >> 5) == 0x1) std::cout << "Previous stage AAA" << std::endl;
+                    else if (((colorInputFlags & 0x3E0) >> 5) == 0x2) std::cout << "Color 0 RGB" << std::endl;
+                    else if (((colorInputFlags & 0x3E0) >> 5) == 0x3) std::cout << "Color 0 AAA" << std::endl;
+                    else if (((colorInputFlags & 0x3E0) >> 5) == 0x4) std::cout << "Color 1 RGB" << std::endl;
+                    else if (((colorInputFlags & 0x3E0) >> 5) == 0x5) std::cout << "Color 1 AAA" << std::endl;
+                    else if (((colorInputFlags & 0x3E0) >> 5) == 0x6) std::cout << "Color 2 RGB" << std::endl;
+                    else if (((colorInputFlags & 0x3E0) >> 5) == 0x7) std::cout << "Color 2 AAA" << std::endl;
+                    else if (((colorInputFlags & 0x3E0) >> 5) == 0x8) std::cout << "Texture RGB" << std::endl;
+                    else if (((colorInputFlags & 0x3E0) >> 5) == 0x9) std::cout << "Texture AAA" << std::endl;
+                    else if (((colorInputFlags & 0x3E0) >> 5) == 0xa) std::cout << "Rasterized RGB" << std::endl;
+                    else if (((colorInputFlags & 0x3E0) >> 5) == 0xb) std::cout << "Rasterized AAA" << std::endl;
+                    else if (((colorInputFlags & 0x3E0) >> 5) == 0xc) std::cout << "One" << std::endl;
+                    else if (((colorInputFlags & 0x3E0) >> 5) == 0xd) std::cout << "Half" << std::endl;
+                    else if (((colorInputFlags & 0x3E0) >> 5) == 0xe) std::cout << "Konstant RGB" << std::endl;
+                    else if (((colorInputFlags & 0x3E0) >> 5) == 0xf) std::cout << "Zero" << std::endl;
+
+                    std::cout << "\tColor input flags (color2): ";
+                         if (((colorInputFlags & 0x7C00) >> 10) == 0x0) std::cout << "Previous stage RGB" << std::endl;
+                    else if (((colorInputFlags & 0x7C00) >> 10) == 0x1) std::cout << "Previous stage AAA" << std::endl;
+                    else if (((colorInputFlags & 0x7C00) >> 10) == 0x2) std::cout << "Color 0 RGB" << std::endl;
+                    else if (((colorInputFlags & 0x7C00) >> 10) == 0x3) std::cout << "Color 0 AAA" << std::endl;
+                    else if (((colorInputFlags & 0x7C00) >> 10) == 0x4) std::cout << "Color 1 RGB" << std::endl;
+                    else if (((colorInputFlags & 0x7C00) >> 10) == 0x5) std::cout << "Color 1 AAA" << std::endl;
+                    else if (((colorInputFlags & 0x7C00) >> 10) == 0x6) std::cout << "Color 2 RGB" << std::endl;
+                    else if (((colorInputFlags & 0x7C00) >> 10) == 0x7) std::cout << "Color 2 AAA" << std::endl;
+                    else if (((colorInputFlags & 0x7C00) >> 10) == 0x8) std::cout << "Texture RGB" << std::endl;
+                    else if (((colorInputFlags & 0x7C00) >> 10) == 0x9) std::cout << "Texture AAA" << std::endl;
+                    else if (((colorInputFlags & 0x7C00) >> 10) == 0xa) std::cout << "Rasterized RGB" << std::endl;
+                    else if (((colorInputFlags & 0x7C00) >> 10) == 0xb) std::cout << "Rasterized AAA" << std::endl;
+                    else if (((colorInputFlags & 0x7C00) >> 10) == 0xc) std::cout << "One" << std::endl;
+                    else if (((colorInputFlags & 0x7C00) >> 10) == 0xd) std::cout << "Half" << std::endl;
+                    else if (((colorInputFlags & 0x7C00) >> 10) == 0xe) std::cout << "Konstant RGB" << std::endl;
+                    else if (((colorInputFlags & 0x7C00) >> 10) == 0xf) std::cout << "Zero" << std::endl;
+                    
+                    std::cout << "\tColor input flags (color3): ";
+                         if (((colorInputFlags & 0xF8000) >> 15) == 0x0) std::cout << "Previous stage RGB" << std::endl;
+                    else if (((colorInputFlags & 0xF8000) >> 15) == 0x1) std::cout << "Previous stage AAA" << std::endl;
+                    else if (((colorInputFlags & 0xF8000) >> 15) == 0x2) std::cout << "Color 0 RGB" << std::endl;
+                    else if (((colorInputFlags & 0xF8000) >> 15) == 0x3) std::cout << "Color 0 AAA" << std::endl;
+                    else if (((colorInputFlags & 0xF8000) >> 15) == 0x4) std::cout << "Color 1 RGB" << std::endl;
+                    else if (((colorInputFlags & 0xF8000) >> 15) == 0x5) std::cout << "Color 1 AAA" << std::endl;
+                    else if (((colorInputFlags & 0xF8000) >> 15) == 0x6) std::cout << "Color 2 RGB" << std::endl;
+                    else if (((colorInputFlags & 0xF8000) >> 15) == 0x7) std::cout << "Color 2 AAA" << std::endl;
+                    else if (((colorInputFlags & 0xF8000) >> 15) == 0x8) std::cout << "Texture RGB" << std::endl;
+                    else if (((colorInputFlags & 0xF8000) >> 15) == 0x9) std::cout << "Texture AAA" << std::endl;
+                    else if (((colorInputFlags & 0xF8000) >> 15) == 0xa) std::cout << "Rasterized RGB" << std::endl;
+                    else if (((colorInputFlags & 0xF8000) >> 15) == 0xb) std::cout << "Rasterized AAA" << std::endl;
+                    else if (((colorInputFlags & 0xF8000) >> 15) == 0xc) std::cout << "One" << std::endl;
+                    else if (((colorInputFlags & 0xF8000) >> 15) == 0xd) std::cout << "Half" << std::endl;
+                    else if (((colorInputFlags & 0xF8000) >> 15) == 0xe) std::cout << "Konstant RGB" << std::endl;
+                    else if (((colorInputFlags & 0xF8000) >> 15) == 0xf) std::cout << "Zero" << std::endl;
+
+
+                    subGetLoc += sizeof(colorInputFlags);
+                    
+                    uint32_t alphaInputFlags;
+                    memcpy(&alphaInputFlags, &rawFile[subGetLoc], sizeof(alphaInputFlags));
+                    alphaInputFlags = swap_endian<uint32_t>(alphaInputFlags);
+                    std::cout << "\tAlpha input flags (color0): ";
+                         if ((alphaInputFlags & 0x1f) == 0x0) std::cout << "Previous stage alpha" << std::endl;
+                    else if ((alphaInputFlags & 0x1f) == 0x1) std::cout << "Color 0 alpha" << std::endl;
+                    else if ((alphaInputFlags & 0x1f) == 0x2) std::cout << "Color 1 alpha" << std::endl;
+                    else if ((alphaInputFlags & 0x1f) == 0x3) std::cout << "Color 2 alpha" << std::endl;
+                    else if ((alphaInputFlags & 0x1f) == 0x4) std::cout << "Texture alpha" << std::endl;
+                    else if ((alphaInputFlags & 0x1f) == 0x5) std::cout << "Rasterized alpha" << std::endl;
+                    else if ((alphaInputFlags & 0x1f) == 0x6) std::cout << "Konstant alpha" << std::endl;
+                    else if ((alphaInputFlags & 0x1f) == 0x7) std::cout << "Zero" << std::endl;
+
+                    std::cout << "\tAlpha input flags (color1): ";
+                         if (((alphaInputFlags & 0x3E0) >> 5) == 0x0) std::cout << "Previous stage alpha" << std::endl;
+                    else if (((alphaInputFlags & 0x3E0) >> 5) == 0x1) std::cout << "Color 0 alpha" << std::endl;
+                    else if (((alphaInputFlags & 0x3E0) >> 5) == 0x2) std::cout << "Color 1 alpha" << std::endl;
+                    else if (((alphaInputFlags & 0x3E0) >> 5) == 0x3) std::cout << "Color 2 alpha" << std::endl;
+                    else if (((alphaInputFlags & 0x3E0) >> 5) == 0x4) std::cout << "Texture alpha" << std::endl;
+                    else if (((alphaInputFlags & 0x3E0) >> 5) == 0x5) std::cout << "Rasterized alpha" << std::endl;
+                    else if (((alphaInputFlags & 0x3E0) >> 5) == 0x6) std::cout << "Konstant alpha" << std::endl;
+                    else if (((alphaInputFlags & 0x3E0) >> 5) == 0x7) std::cout << "Zero" << std::endl;
+
+                    std::cout << "\tAlpha input flags (color2): ";
+                         if (((alphaInputFlags & 0x7C00) >> 10) == 0x0) std::cout << "Previous stage alpha" << std::endl;
+                    else if (((alphaInputFlags & 0x7C00) >> 10) == 0x1) std::cout << "Color 0 alpha" << std::endl;
+                    else if (((alphaInputFlags & 0x7C00) >> 10) == 0x2) std::cout << "Color 1 alpha" << std::endl;
+                    else if (((alphaInputFlags & 0x7C00) >> 10) == 0x3) std::cout << "Color 2 alpha" << std::endl;
+                    else if (((alphaInputFlags & 0x7C00) >> 10) == 0x4) std::cout << "Texture alpha" << std::endl;
+                    else if (((alphaInputFlags & 0x7C00) >> 10) == 0x5) std::cout << "Rasterized alpha" << std::endl;
+                    else if (((alphaInputFlags & 0x7C00) >> 10) == 0x6) std::cout << "Konstant alpha" << std::endl;
+                    else if (((alphaInputFlags & 0x7C00) >> 10) == 0x7) std::cout << "Zero" << std::endl;
+
+                    std::cout << "\tAlpha input flags (color3): ";
+                         if (((alphaInputFlags & 0xF8000) >> 15) == 0x0) std::cout << "Previous stage alpha" << std::endl;
+                    else if (((alphaInputFlags & 0xF8000) >> 15) == 0x1) std::cout << "Color 0 alpha" << std::endl;
+                    else if (((alphaInputFlags & 0xF8000) >> 15) == 0x2) std::cout << "Color 1 alpha" << std::endl;
+                    else if (((alphaInputFlags & 0xF8000) >> 15) == 0x3) std::cout << "Color 2 alpha" << std::endl;
+                    else if (((alphaInputFlags & 0xF8000) >> 15) == 0x4) std::cout << "Texture alpha" << std::endl;
+                    else if (((alphaInputFlags & 0xF8000) >> 15) == 0x5) std::cout << "Rasterized alpha" << std::endl;
+                    else if (((alphaInputFlags & 0xF8000) >> 15) == 0x6) std::cout << "Konstant alpha" << std::endl;
+                    else if (((alphaInputFlags & 0xF8000) >> 15) == 0x7) std::cout << "Zero" << std::endl;
+                    subGetLoc += sizeof(alphaInputFlags);
+
+                    uint32_t colorCombineFlags;
+                    memcpy(&colorCombineFlags, &rawFile[subGetLoc], sizeof(colorCombineFlags));
+                    colorCombineFlags = swap_endian<uint32_t>(colorCombineFlags);
+                    std::cout << "\tcolor combine flags: " << std::endl;
+                    std::cout << "\tCombiner operator:   " << ((colorCombineFlags & 0x0000000F) >> 0) << std::endl;
+                    std::cout << "\tBias:                " << ((colorCombineFlags & 0x00000030) >> 4) << std::endl;
+                    std::cout << "\tScale:               " << ((colorCombineFlags & 0x000000C0) >> 6) << std::endl;
+                    std::cout << "\tClamp flag:          " << ((colorCombineFlags & 0x00000100) >> 8) << std::endl;
+                    std::cout << "\tOutput register:     " << ((colorCombineFlags & 0x00000600) >> 9) << std::endl;
+                    std::cout << "\tUnused:              " << ((colorCombineFlags & 0xFFFFF800) >> 11) << std::endl;
+                    subGetLoc += sizeof(colorCombineFlags);
+
+                    uint32_t alphaCombineFlags;
+                    memcpy(&alphaCombineFlags, &rawFile[subGetLoc], sizeof(alphaCombineFlags));
+                    alphaCombineFlags = swap_endian<uint32_t>(alphaCombineFlags);
+                    std::cout << "\talpha combine flags: " << std::endl;
+                    std::cout << "\tCombiner operator:   " << ((alphaCombineFlags & 0x0000000F) >> 0) << std::endl;
+                    std::cout << "\tBias:                " << ((alphaCombineFlags & 0x00000030) >> 4) << std::endl;
+                    std::cout << "\tScale:               " << ((alphaCombineFlags & 0x000000C0) >> 6) << std::endl;
+                    std::cout << "\tClamp flag:          " << ((alphaCombineFlags & 0x00000100) >> 8) << std::endl;
+                    std::cout << "\tOutput register:     " << ((alphaCombineFlags & 0x00000600) >> 9) << std::endl;
+                    std::cout << "\tUnused:              " << ((alphaCombineFlags & 0xFFFFF800) >> 11) << std::endl;
+                    subGetLoc += sizeof(alphaCombineFlags);
+
+
+
+                    uint8_t padding;
+                    memcpy(&padding, &rawFile[subGetLoc], sizeof(padding));
+                    subGetLoc += sizeof(padding);
+
+                    uint8_t konstAlphaInput;
+                    memcpy(&konstAlphaInput, &rawFile[subGetLoc], sizeof(konstAlphaInput));
+                    subGetLoc += sizeof(konstAlphaInput);
+
+                    uint8_t konstColorInput;
+                    memcpy(&konstColorInput, &rawFile[subGetLoc], sizeof(konstColorInput));
+                    subGetLoc += sizeof(konstColorInput);
+
+                    uint8_t rasterizedColorInput;
+                    memcpy(&rasterizedColorInput, &rawFile[subGetLoc], sizeof(rasterizedColorInput));
+                    subGetLoc += sizeof(rasterizedColorInput);
+                }
+                for (int ijkl = 0; ijkl < TEVStageCount; ijkl++)
+                {
+                    uint16_t padding;
+                    memcpy(&padding, &rawFile[subGetLoc], sizeof(padding));
+                    subGetLoc += sizeof(padding);
+
+                    uint8_t textureTEVInput;
+                    memcpy(&textureTEVInput, &rawFile[subGetLoc], sizeof(textureTEVInput));
+                    std::cout << "texture TEV Input: " << (uint32_t)textureTEVInput << std::endl;
+                    subGetLoc += sizeof(textureTEVInput);
+
+                    uint8_t texCoordTEVInput;
+                    memcpy(&texCoordTEVInput, &rawFile[subGetLoc], sizeof(texCoordTEVInput));
+                    std::cout << "texture coord TEV Input: " << (uint32_t)texCoordTEVInput << std::endl;
+                    subGetLoc += sizeof(texCoordTEVInput);
+                }
+
+                uint32_t texGenCount;
+                memcpy(&texGenCount, &rawFile[subGetLoc], sizeof(texGenCount));
+                texGenCount = swap_endian<uint32_t>(texGenCount);
+                std::cout << "texGen Count: " << texGenCount << std::endl;
+                subGetLoc += sizeof(texGenCount);
+
+                for (int ijkl = 0; ijkl < texGenCount; ijkl++)
+                {
+                    uint32_t texGenFlag;
+                    memcpy(&texGenFlag, &rawFile[subGetLoc], sizeof(texGenFlag));
+                    texGenFlag = swap_endian<uint32_t>(texGenFlag);
+                    std::cout << "texGen flag "<<ijkl<<": " << std::endl;
+                    std::cout << "\ttexCoord gen type: ";
+                    switch (ijkl&0xF)
+                    {
+                        case GX_TG_BUMP0:   std::cout << "GX_TG_BUMP0"  << std::endl; break;
+                        case GX_TG_BUMP1:   std::cout << "GX_TG_BUMP1"  << std::endl; break;
+                        case GX_TG_BUMP2:   std::cout << "GX_TG_BUMP2"  << std::endl; break;
+                        case GX_TG_BUMP3:   std::cout << "GX_TG_BUMP3"  << std::endl; break;
+                        case GX_TG_BUMP4:   std::cout << "GX_TG_BUMP4"  << std::endl; break;
+                        case GX_TG_BUMP5:   std::cout << "GX_TG_BUMP5"  << std::endl; break;
+                        case GX_TG_BUMP6:   std::cout << "GX_TG_BUMP6"  << std::endl; break;
+                        case GX_TG_BUMP7:   std::cout << "GX_TG_BUMP7"  << std::endl; break;
+                        case GX_TG_MTX2x4:  std::cout << "GX_TG_MTX2x4" << std::endl; break;
+                        case GX_TG_MTX3x4:  std::cout << "GX_TG_MTX3x4" << std::endl; break;
+                        case GX_TG_SRTG:    std::cout << "GX_TG_SRTG"   << std::endl; break;
+                    }
+                    std::cout << "\ttexCoord src: ";
+                    switch ((ijkl & 0x1F0) >> 4)
+                    {
+                        case GX_TG_BINRM    : std::cout << "GX_TG_BINRM     " << std::endl;break;
+                        case GX_TG_COLOR0   : std::cout << "GX_TG_COLOR0    " << std::endl;break;
+                        case GX_TG_COLOR1   : std::cout << "GX_TG_COLOR1    " << std::endl;break;
+                        case GX_TG_NRM      : std::cout << "GX_TG_NRM       " << std::endl;break;
+                        case GX_TG_POS      : std::cout << "GX_TG_POS       " << std::endl;break;
+                        case GX_TG_TANGENT  : std::cout << "GX_TG_TANGENT   " << std::endl;break;
+                        case GX_TG_TEX0     : std::cout << "GX_TG_TEX0      " << std::endl;break;
+                        case GX_TG_TEX1     : std::cout << "GX_TG_TEX1      " << std::endl;break;
+                        case GX_TG_TEX2     : std::cout << "GX_TG_TEX2      " << std::endl;break;
+                        case GX_TG_TEX3     : std::cout << "GX_TG_TEX3      " << std::endl;break;
+                        case GX_TG_TEX4     : std::cout << "GX_TG_TEX4      " << std::endl;break;
+                        case GX_TG_TEX5     : std::cout << "GX_TG_TEX5      " << std::endl;break;
+                        case GX_TG_TEX6     : std::cout << "GX_TG_TEX6      " << std::endl;break;
+                        case GX_TG_TEX7     : std::cout << "GX_TG_TEX7      " << std::endl;break;
+                        case GX_TG_TEXCOORD0: std::cout << "GX_TG_TEXCOORD0 " << std::endl;break;
+                        case GX_TG_TEXCOORD1: std::cout << "GX_TG_TEXCOORD1 " << std::endl;break;
+                        case GX_TG_TEXCOORD2: std::cout << "GX_TG_TEXCOORD2 " << std::endl;break;
+                        case GX_TG_TEXCOORD3: std::cout << "GX_TG_TEXCOORD3 " << std::endl;break;
+                        case GX_TG_TEXCOORD4: std::cout << "GX_TG_TEXCOORD4 " << std::endl;break;
+                        case GX_TG_TEXCOORD5: std::cout << "GX_TG_TEXCOORD5 " << std::endl;break;
+                        case GX_TG_TEXCOORD6: std::cout << "GX_TG_TEXCOORD6 " << std::endl;break;
+                    }
+                    std::cout << "\ttex matrix index: ";
+                    switch (((ijkl & 0x3E00) >> 9) + 30)
+                    {
+                        case GX_IDENTITY: std::cout << "GX_IDENTITY" << std::endl;break;
+                        case GX_TEXMTX0 : std::cout << "GX_TEXMTX0 " << std::endl;break;
+                        case GX_TEXMTX1 : std::cout << "GX_TEXMTX1 " << std::endl;break;
+                        case GX_TEXMTX2 : std::cout << "GX_TEXMTX2 " << std::endl;break;
+                        case GX_TEXMTX3 : std::cout << "GX_TEXMTX3 " << std::endl;break;
+                        case GX_TEXMTX4 : std::cout << "GX_TEXMTX4 " << std::endl;break;
+                        case GX_TEXMTX5 : std::cout << "GX_TEXMTX5 " << std::endl;break;
+                        case GX_TEXMTX6 : std::cout << "GX_TEXMTX6 " << std::endl;break;
+                        case GX_TEXMTX7 : std::cout << "GX_TEXMTX7 " << std::endl;break;
+                        case GX_TEXMTX8 : std::cout << "GX_TEXMTX8 " << std::endl;break;
+                        case GX_TEXMTX9 : std::cout << "GX_TEXMTX9 " << std::endl;break;
+                    }
+                    std::cout << "\tnormalize flag: " << ((ijkl&0x4000)>0?"on":"off") << std::endl;
+                    std::cout << "\tpost transform tex matrix index: ";
+                    switch (((ijkl & 0x1F8000) >> 15)+64)
+                    {
+                        case GX_DTTIDENTITY: std::cout << "GX_DTTIDENTITY" << std::endl;break;
+                        case GX_DTTMTX0    : std::cout << "GX_DTTMTX0    " << std::endl;break;
+                        case GX_DTTMTX1    : std::cout << "GX_DTTMTX1    " << std::endl;break;
+                        case GX_DTTMTX10   : std::cout << "GX_DTTMTX10   " << std::endl;break;
+                        case GX_DTTMTX11   : std::cout << "GX_DTTMTX11   " << std::endl;break;
+                        case GX_DTTMTX12   : std::cout << "GX_DTTMTX12   " << std::endl;break;
+                        case GX_DTTMTX13   : std::cout << "GX_DTTMTX13   " << std::endl;break;
+                        case GX_DTTMTX14   : std::cout << "GX_DTTMTX14   " << std::endl;break;
+                        case GX_DTTMTX15   : std::cout << "GX_DTTMTX15   " << std::endl;break;
+                        case GX_DTTMTX16   : std::cout << "GX_DTTMTX16   " << std::endl;break;
+                        case GX_DTTMTX17   : std::cout << "GX_DTTMTX17   " << std::endl;break;
+                        case GX_DTTMTX18   : std::cout << "GX_DTTMTX18   " << std::endl;break;
+                        case GX_DTTMTX19   : std::cout << "GX_DTTMTX19   " << std::endl;break;
+                        case GX_DTTMTX2    : std::cout << "GX_DTTMTX2    " << std::endl;break;
+                        case GX_DTTMTX3    : std::cout << "GX_DTTMTX3    " << std::endl;break;
+                        case GX_DTTMTX4    : std::cout << "GX_DTTMTX4    " << std::endl;break;
+                        case GX_DTTMTX5    : std::cout << "GX_DTTMTX5    " << std::endl;break;
+                        case GX_DTTMTX6    : std::cout << "GX_DTTMTX6    " << std::endl;break;
+                        case GX_DTTMTX7    : std::cout << "GX_DTTMTX7    " << std::endl;break;
+                        case GX_DTTMTX8    : std::cout << "GX_DTTMTX8    " << std::endl;break;
+                        case GX_DTTMTX9    : std::cout << "GX_DTTMTX9    " << std::endl;break;
+                    }
+                    subGetLoc += sizeof(texGenCount);
+                }
 
                 subGetLoc = materialStartingMarker + CMDLMap[AssetID].materialSets[imat].materialEndOffsets[ijk];
 
@@ -1458,6 +1737,10 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
             CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount = swap_endian<uint16_t>(CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount);
             std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount)) << "] vertex count:" << std::dec << CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount << std::dec << std::endl;
             subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount);
+
+            //CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.resize(CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.size() + CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount);
+            //CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.resize(CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.size() + CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount);
+            //CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.resize(CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.size() + CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount);
 
             uint16_t pos_index1before = 0;
             uint16_t pos_index2before = 0;
@@ -1715,6 +1998,7 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
 
 
             }
+            
             //0x3       position
             //0xC       normal
             //0x30      color 0
