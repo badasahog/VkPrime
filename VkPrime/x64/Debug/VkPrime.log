@@ -129,10 +129,10 @@ C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(344,63): warning C4244: 
           ]
 C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(736,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
 C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(967,191): warning C4101: 'texChannels': unreferenced local variable
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1317,24): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1329,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1318,24): warning C4018: '<': signed/unsigned mismatch
 C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1330,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1355,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1517,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1331,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1356,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1518,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
 C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(376): warning C4715: 'findAsset': not all control paths return a value
   VkPrime.vcxproj -> C:\Users\yair\Documents\GitHub\VkPrime\x64\Debug\VkPrime.exe
