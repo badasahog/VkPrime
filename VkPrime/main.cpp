@@ -1311,8 +1311,9 @@ private:
         //Metroid3:
         //giant monster: 0x07D51E01
         //tower: 0xD1BA6B82
-        //tiny piece of phazon: 0x5F8D540D 
-        tempCMDLID = 0xD3D3AB81;
+        //tiny piece of phazon: 0x5F8D540D
+        MLVL mlvl = *loadMLVL(0x83F6FF6F, "Metroid2.pak");
+        tempCMDLID = mlvl.defaultSkyboxID;
         CMDL cmdl = *loadCMDL(tempCMDLID, "Metroid2.pak");
         imageStuffs.resize(cmdl.materialSets[0].textureCount);
         for(int i = 0;i<cmdl.materialSets[0].textureCount;i++)

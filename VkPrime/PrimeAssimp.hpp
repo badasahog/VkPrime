@@ -1036,38 +1036,32 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
 
     uint64_t subGetLoc = 0;
     reader.readInt32(&CMDLMap[AssetID].magic);
-    std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].magic)) << "] magic:" << CMDLMap[AssetID].magic << std::dec << std::endl;
-    subGetLoc += sizeof(CMDLMap[AssetID].magic);
+    std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(CMDLMap[AssetID].magic)) << "] magic:" << CMDLMap[AssetID].magic << std::dec << std::endl;
 
     reader.readInt32(&CMDLMap[AssetID].version); 
-    std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].version)) << "] version:" << CMDLMap[AssetID].version << std::dec << std::endl;
-    subGetLoc += sizeof(CMDLMap[AssetID].version);
+    std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(CMDLMap[AssetID].version)) << "] version:" << CMDLMap[AssetID].version << std::dec << std::endl;
     
     reader.readInt32(&CMDLMap[AssetID].flags);
-    std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].flags)) << "] flags:" << std::endl;
+    std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(CMDLMap[AssetID].flags)) << "] flags:" << std::endl;
     std::cout << "\tIndicates the model is skinned: " << ((CMDLMap[AssetID].flags & 0x1) > 0 ? "1" : "0") << std::endl;
     std::cout << "\tToggle short normals:           " << ((CMDLMap[AssetID].flags & 0x2) > 0 ? "1" : "0") << std::endl;
     std::cout << "\tEnable short UV array:          " << ((CMDLMap[AssetID].flags & 0x4) > 0 ? "1" : "0") << std::endl;
     bool halfPrecisionNormals = ((CMDLMap[AssetID].flags & 0x2) > 0);
     bool halfPrecisionUVs = ((CMDLMap[AssetID].flags & 0x4) > 0);
-    subGetLoc += sizeof(CMDLMap[AssetID].flags);
 
-    std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(float) * 6) << "] Model Axis-Aligned Bounding Box:";
+    std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(float) * 6) << "] Model Axis-Aligned Bounding Box:";
     for (int ijk = 0; ijk < 6; ijk++)
     {
         reader.readFloat(&(CMDLMap[AssetID].ModelAxisAlignedBoundingBox[ijk]));
         std::cout << CMDLMap[AssetID].ModelAxisAlignedBoundingBox[ijk];
     }
     std::cout << std::dec << std::endl;
-    subGetLoc += sizeof(float) * 6;
 
     reader.readInt32(&CMDLMap[AssetID].dataSectionCount);
-    std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].dataSectionCount)) << "] data Section Count:" << CMDLMap[AssetID].dataSectionCount << std::dec << std::endl;
-    subGetLoc += sizeof(CMDLMap[AssetID].dataSectionCount);
+    std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(CMDLMap[AssetID].dataSectionCount)) << "] data Section Count:" << CMDLMap[AssetID].dataSectionCount << std::dec << std::endl;
 
     reader.readInt32(&CMDLMap[AssetID].MaterialSetCount);
-    std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].MaterialSetCount)) << "] Material Set Count:" << CMDLMap[AssetID].MaterialSetCount << std::dec << std::endl;
-    subGetLoc += sizeof(CMDLMap[AssetID].MaterialSetCount);
+    std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(CMDLMap[AssetID].MaterialSetCount)) << "] Material Set Count:" << CMDLMap[AssetID].MaterialSetCount << std::dec << std::endl;
 
     CMDLMap[AssetID].materialSets.resize(CMDLMap[AssetID].MaterialSetCount);
 
@@ -1077,15 +1071,13 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
     {
         reader.readInt32(&CMDLMap[AssetID].dataSectionSizes[ijk]);
 
-        std::cout << std::hex << "[" << subGetLoc << " :: " << subGetLoc + sizeof(uint32_t) << "]" << "data section " << std::dec << ijk << " size: " << CMDLMap[AssetID].dataSectionSizes[ijk] << std::endl;
-        subGetLoc += sizeof(uint32_t);
+        std::cout << std::hex << "[" << reader.getloc << " :: " << subGetLoc + sizeof(uint32_t) << "]" << "data section " << std::dec << ijk << " size: " << CMDLMap[AssetID].dataSectionSizes[ijk] << std::endl;
 
     }
     reader.seekBoundary32();
-    subGetLoc += 32 - subGetLoc % 32;
 
-    uint32_t upperGetLoc = subGetLoc;
-    std::cout << "reading material data from " << std::hex << subGetLoc << std::dec << std::endl;
+    uint32_t upperGetLoc = reader.getloc;
+    std::cout << "reading material data from " << std::hex << reader.getloc << std::dec << std::endl;
 
 
     for (int imat = 0; imat < CMDLMap[AssetID].MaterialSetCount; imat++)
@@ -1098,29 +1090,26 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
         for (int tx = 0; tx < CMDLMap[AssetID].materialSets[imat].textureCount; tx++) {
             reader.readInt32(&CMDLMap[AssetID].materialSets[imat].textureFileIDs[tx]);
             std::cout << "texture used: " << std::hex << CMDLMap[AssetID].materialSets[imat].textureFileIDs[tx] << std::dec << std::endl;
-            subGetLoc += sizeof(CMDLMap[AssetID].materialSets[imat].textureFileIDs[tx]);
         }
 
 
         reader.readInt32(&(CMDLMap[AssetID].materialSets[imat].materialCount));
         std::cout << CMDLMap[AssetID].materialSets[imat].materialCount << std::endl;
-        subGetLoc += sizeof(CMDLMap[AssetID].materialSets[imat].materialCount);
         
         CMDLMap[AssetID].materialSets[imat].materialEndOffsets.resize(CMDLMap[AssetID].materialSets[imat].materialCount);
         for (int mc = 0; mc < CMDLMap[AssetID].materialSets[imat].materialCount; mc++) {
             reader.readInt32(&CMDLMap[AssetID].materialSets[imat].materialEndOffsets[mc]);
             std::cout << "material end offset: " << std::hex << CMDLMap[AssetID].materialSets[imat].materialEndOffsets[mc] << std::dec << std::endl;
         }
-        subGetLoc += CMDLMap[AssetID].materialSets[imat].materialCount * sizeof(uint32_t);
 
-        uint32_t materialStartingMarker = subGetLoc;
+        uint32_t materialStartingMarker = reader.getloc;
 
         CMDLMap[AssetID].materialSets[imat].materials.resize(CMDLMap[AssetID].materialSets[imat].materialCount + 5);
         for (int ijk = 0; ijk < CMDLMap[AssetID].materialSets[imat].materialCount; ijk++)
         {
             uint32_t flags;
             reader.readInt32(&flags);
-            std::cout << "offset: " << std::hex << subGetLoc << std::dec << std::endl;
+            std::cout << "offset: " << std::hex << reader.getloc << std::dec << std::endl;
             std::cout << "material properties:" << std::endl;
             std::cout << "\tUnused, always set:                                " << ((flags & 0x01) > 0 ? "on" : "off") << std::endl;
             std::cout << "\tUnused, always set:                                " << ((flags & 0x02) > 0 ? "on" : "off") << std::endl;
@@ -1138,18 +1127,16 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
             std::cout << "\tEnable first UV coordinate to use short array:     " << ((flags & 0x2000) > 0 ? "on" : "off") << std::endl;
             std::cout << "\tunused, never set:                                 " << ((flags & 0x4000) > 0 ? "on" : "off") << std::endl;
             std::cout << "\tunused, never set:                                 " << ((flags & 0x8000) > 0 ? "on" : "off") << std::endl;
-            subGetLoc += sizeof(flags);
             uint32_t TC;
             reader.readInt32(&TC);
             std::cout << "Texture Count: " << TC << std::endl;
-            subGetLoc += sizeof(TC);
+
             while (TC > 100) {}//safety to prevent crahes
             CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices.resize(TC);
             std::cout << "textures:" << std::endl;
             for (int tx = 0; tx < TC; tx++) {
                 reader.readInt32(&CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx]);
                 std::cout << "\ttexture: " << std::hex << CMDLMap[AssetID].materialSets[imat].textureFileIDs[CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx]] << std::dec << std::endl;
-                subGetLoc += sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx]);
             }
 
 
@@ -1166,24 +1153,20 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
             std::cout << "\tTex 4:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x030000) > 0 ? "1" : "0") << std::endl;
             std::cout << "\tTex 5:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x0C0000) > 0 ? "1" : "0") << std::endl;
             std::cout << "\tTex 6:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x300000) > 0 ? "1" : "0") << std::endl;
-            subGetLoc += sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags);
             uint32_t groupIndex;
             reader.readInt32(&groupIndex);
             std::cout << "group index: " << groupIndex << std::endl;
-            subGetLoc += sizeof(groupIndex);
             if ((flags & 0x08) > 0)
             {
                 uint32_t KonstCount;
                 reader.readInt32(&KonstCount);
                 std::cout << "KonstCount: " << KonstCount << std::endl;
                 CMDLMap[AssetID].materialSets[imat].materials[ijk].konstColors.resize(KonstCount);
-                subGetLoc += sizeof(KonstCount);
 
                 for (int mc = 0; mc < KonstCount; mc++) {
                     reader.readInt32(&CMDLMap[AssetID].materialSets[imat].materials[ijk].konstColors[mc]);
                     std::cout << "konst color " << mc << ": " << std::hex << CMDLMap[AssetID].materialSets[imat].materials[ijk].konstColors[mc] << std::dec << std::endl;
 
-                    subGetLoc += sizeof(uint32_t);
                 }
             }
 
@@ -1192,40 +1175,34 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
             uint16_t blendDestFactor;
             reader.readInt16(&blendDestFactor);
             std::cout << "blendDestFactor: " << blendDestFactor << std::endl;
-            subGetLoc += sizeof(blendDestFactor);
 
             uint16_t blendSourceFactor;
             reader.readInt16(&blendSourceFactor);
             std::cout << "blendSourceFactor: " << blendSourceFactor << std::endl;
-            subGetLoc += sizeof(blendSourceFactor);
 
             if ((flags & 0x400) != 0)
             {
                 uint32_t reflectionIndirectTextureIndex;
                 reader.readInt32(&reflectionIndirectTextureIndex);
                 std::cout << "reflection Indirect Texture Index: " << reflectionIndirectTextureIndex << std::endl;
-                subGetLoc += sizeof(reflectionIndirectTextureIndex);
             }
 
 
             reader.readInt32(&CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount);
             std::cout << "color channel count: " << CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount << std::endl;
-            subGetLoc += sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount);
 
             reader.readInt32(&CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags);
             std::cout << "color channel flags: " << CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags << std::dec << std::endl;
 
-            subGetLoc += CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount * 4;
 
 
             uint32_t TEVStageCount;
             reader.readInt32(&TEVStageCount);
             std::cout << "TEV Stage Count: " << TEVStageCount << std::endl;
-            subGetLoc += sizeof(TEVStageCount);
 
             for (int ijkl = 0; ijkl < TEVStageCount; ijkl++)
             {
-                std::cout << std::hex << "[" << subGetLoc << "] TEV stage " << std::dec << ijkl << ": " << std::endl;
+                std::cout << std::hex << "[" << reader.getloc << "] TEV stage " << std::dec << ijkl << ": " << std::endl;
                 uint32_t colorInputFlags;
                 reader.readInt32(&colorInputFlags);
                 std::cout << "\tColor input flags (color0): ";
@@ -1301,7 +1278,6 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                 else if (((colorInputFlags & 0xF8000) >> 15) == 0xf) std::cout << "Zero" << std::endl;
 
 
-                subGetLoc += sizeof(colorInputFlags);
                     
                 uint32_t alphaInputFlags;
                 reader.readInt32(&alphaInputFlags);
@@ -1344,7 +1320,6 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                 else if (((alphaInputFlags & 0xF8000) >> 15) == 0x5) std::cout << "Rasterized alpha" << std::endl;
                 else if (((alphaInputFlags & 0xF8000) >> 15) == 0x6) std::cout << "Konstant alpha" << std::endl;
                 else if (((alphaInputFlags & 0xF8000) >> 15) == 0x7) std::cout << "Zero" << std::endl;
-                subGetLoc += sizeof(alphaInputFlags);
 
                 uint32_t colorCombineFlags;
                 reader.readInt32(&colorCombineFlags);
@@ -1355,7 +1330,6 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                 std::cout << "\tClamp flag:          " << ((colorCombineFlags & 0x00000100) >> 8) << std::endl;
                 std::cout << "\tOutput register:     " << ((colorCombineFlags & 0x00000600) >> 9) << std::endl;
                 std::cout << "\tUnused:              " << ((colorCombineFlags & 0xFFFFF800) >> 11) << std::endl;
-                subGetLoc += sizeof(colorCombineFlags);
 
                 uint32_t alphaCombineFlags;
                 reader.readInt32(&alphaCombineFlags);
@@ -1366,25 +1340,20 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                 std::cout << "\tClamp flag:          " << ((alphaCombineFlags & 0x00000100) >> 8) << std::endl;
                 std::cout << "\tOutput register:     " << ((alphaCombineFlags & 0x00000600) >> 9) << std::endl;
                 std::cout << "\tUnused:              " << ((alphaCombineFlags & 0xFFFFF800) >> 11) << std::endl;
-                subGetLoc += sizeof(alphaCombineFlags);
 
 
 
                 uint8_t padding;
                 reader.readInt8(&padding);
-                subGetLoc += sizeof(padding);
 
                 uint8_t konstAlphaInput;
                 reader.readInt8(&konstAlphaInput);
-                subGetLoc += sizeof(konstAlphaInput);
 
                 uint8_t konstColorInput;
                 reader.readInt8(&konstColorInput);
-                subGetLoc += sizeof(konstColorInput);
 
                 uint8_t rasterizedColorInput;
                 reader.readInt8(&rasterizedColorInput);
-                subGetLoc += sizeof(rasterizedColorInput);
             }
             for (int ijkl = 0; ijkl < TEVStageCount; ijkl++)
             {
@@ -1395,18 +1364,15 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                 uint8_t textureTEVInput;
                 reader.readInt8(&textureTEVInput);
                 std::cout << "texture TEV Input: " << (uint32_t)textureTEVInput << std::endl;
-                subGetLoc += sizeof(textureTEVInput);
 
                 uint8_t texCoordTEVInput;
                 reader.readInt8(&texCoordTEVInput);
                 std::cout << "texture coord TEV Input: " << (uint32_t)texCoordTEVInput << std::endl;
-                subGetLoc += sizeof(texCoordTEVInput);
             }
 
             uint32_t texGenCount;
             reader.readInt32(&texGenCount);
             std::cout << "texGen Count: " << texGenCount << std::endl;
-            subGetLoc += sizeof(texGenCount);
 
             for (int ijkl = 0; ijkl < texGenCount; ijkl++)
             {
@@ -1494,7 +1460,6 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                     case GX_DTTMTX8    : std::cout << "GX_DTTMTX8    " << std::endl;break;
                     case GX_DTTMTX9    : std::cout << "GX_DTTMTX9    " << std::endl;break;
                 }
-                subGetLoc += sizeof(texGenCount);
             }
 
             subGetLoc = materialStartingMarker + CMDLMap[AssetID].materialSets[imat].materialEndOffsets[ijk];
@@ -1507,7 +1472,7 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
 
     }
 
-    std::cout << "reading geometry data from " << std::hex << subGetLoc << std::dec << std::endl;
+    std::cout << "reading geometry data from " << std::hex << reader.getloc << std::dec << std::endl;
     upperGetLoc = subGetLoc;
 
 
@@ -1566,7 +1531,7 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
     subGetLoc = upperGetLoc;
 
 
-    std::cout << std::hex << "[" << subGetLoc << " :: " << subGetLoc << "]" << std::dec << "skipping color data" << std::endl;
+    std::cout << std::hex << "[" << reader.getloc << " :: " << reader.getloc << "]" << std::dec << "skipping color data" << std::endl;
 
     //no need to read color data, it's all empty
 
@@ -1608,12 +1573,12 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
     upperGetLoc += CMDLMap[AssetID].dataSectionSizes[CMDLMap[AssetID].MaterialSetCount + 4];
     subGetLoc = upperGetLoc;
 
-    std::cout << std::hex << "[" << subGetLoc << " :: " << subGetLoc << "]" << std::dec << "reading header data" << std::endl;
+    std::cout << std::hex << "[" << reader.getloc << " :: " << reader.getloc << "]" << std::dec << "reading header data" << std::endl;
     //the moment of truth:
 
     memcpy(&CMDLMap[AssetID].geometry.surfaceCount, &rawFile[subGetLoc], 4);
     CMDLMap[AssetID].geometry.surfaceCount = _byteswap_ulong(CMDLMap[AssetID].geometry.surfaceCount);
-    std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaceCount)) << "] surface count:" << CMDLMap[AssetID].geometry.surfaceCount << std::dec << std::endl;
+    std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(CMDLMap[AssetID].geometry.surfaceCount)) << "] surface count:" << CMDLMap[AssetID].geometry.surfaceCount << std::dec << std::endl;
     subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaceCount);
 
     CMDLMap[AssetID].geometry.surfaceOffsets.resize(CMDLMap[AssetID].geometry.surfaceCount);
@@ -1622,7 +1587,7 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
     {
         memcpy(&CMDLMap[AssetID].geometry.surfaceOffsets[ijk], &rawFile[subGetLoc], sizeof(uint32_t));
         CMDLMap[AssetID].geometry.surfaceOffsets[ijk] = _byteswap_ulong(CMDLMap[AssetID].geometry.surfaceOffsets[ijk]);
-        std::cout << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(uint32_t)) << "] surface offset " << ijk << ": " << std::hex << CMDLMap[AssetID].geometry.surfaceOffsets[ijk] << std::dec << std::endl;
+        std::cout << "[" << reader.getloc << " :: " << (subGetLoc + sizeof(uint32_t)) << "] surface offset " << ijk << ": " << std::hex << CMDLMap[AssetID].geometry.surfaceOffsets[ijk] << std::dec << std::endl;
         subGetLoc += sizeof(uint32_t);
     }
 
@@ -1649,32 +1614,32 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
             sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex)
         );
         CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex = _byteswap_ulong(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex);
-        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex)) << "] matIndex:" << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex << std::dec << std::endl;
+        std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex)) << "] matIndex:" << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex << std::dec << std::endl;
         subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex);
 
         memcpy(&CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).mantissa, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).mantissa));
         CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).mantissa = _byteswap_ushort(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).mantissa);
-        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).mantissa)) << "] mantissa:" << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).mantissa << std::dec << std::endl;
+        std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).mantissa)) << "] mantissa:" << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).mantissa << std::dec << std::endl;
         subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).mantissa);
 
         memcpy(&CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).displayListSize, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).displayListSize));
         CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).displayListSize = _byteswap_ushort(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).displayListSize);
-        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).displayListSize)) << "] display list size:" << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).displayListSize << std::dec << std::endl;
+        std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).displayListSize)) << "] display list size:" << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).displayListSize << std::dec << std::endl;
         subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).displayListSize);
 
         memcpy(&CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).parentModelPointer, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).parentModelPointer));
         CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).parentModelPointer = _byteswap_ulong(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).parentModelPointer);
-        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).parentModelPointer)) << "] parentModelPointer (always 0):" << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).parentModelPointer << std::dec << std::endl;
+        std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).parentModelPointer)) << "] parentModelPointer (always 0):" << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).parentModelPointer << std::dec << std::endl;
         subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).parentModelPointer);
 
         memcpy(&CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nextSurfacePointer, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nextSurfacePointer));
         CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nextSurfacePointer = _byteswap_ulong(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nextSurfacePointer);
-        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nextSurfacePointer)) << "] nextSurfacePointer (always 0):" << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nextSurfacePointer << std::dec << std::endl;
+        std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nextSurfacePointer)) << "] nextSurfacePointer (always 0):" << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nextSurfacePointer << std::dec << std::endl;
         subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nextSurfacePointer);
 
         memcpy(&CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).extraDataSize, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).extraDataSize));
         CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).extraDataSize = _byteswap_ulong(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).extraDataSize);
-        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).extraDataSize)) << "] extraDataSize (always 0):" << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).extraDataSize << std::dec << std::endl;
+        std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).extraDataSize)) << "] extraDataSize (always 0):" << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).extraDataSize << std::dec << std::endl;
         subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).extraDataSize);
 
         CMDLMap[AssetID].geometry.surfaces.resize(CMDLMap[AssetID].geometry.surfaceCount);
@@ -1701,7 +1666,7 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
         //todo: read until the gx flag hits zero or it hits the end of the section
 
         memcpy(&CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags));
-        //std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(GXFlags)) << "] GXFlags:" << GXFlags << std::dec << std::endl;
+        //std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(GXFlags)) << "] GXFlags:" << GXFlags << std::dec << std::endl;
         subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags);
 
         while (CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags > 0)
@@ -1741,7 +1706,7 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
             }
             memcpy(&CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount));
             CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount = _byteswap_ushort(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount);
-            std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount)) << "] vertex count:" << std::dec << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount << std::dec << std::endl;
+            std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount)) << "] vertex count:" << std::dec << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount << std::dec << std::endl;
             subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount);
 
             //CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).pos_indices.resize(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).pos_indices.size() + CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount);
@@ -2031,7 +1996,7 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
             }
 
             memcpy(&CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags));
-            //std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(GXFlags)) << "] GXFlags:" << GXFlags << std::dec << std::endl;
+            //std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(GXFlags)) << "] GXFlags:" << GXFlags << std::dec << std::endl;
             
             subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags);
 
