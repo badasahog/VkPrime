@@ -12,8 +12,12 @@
 #include <fstream>
 #include <zlib.h>
 #include "GXCore.hpp"
+#include "FileReader.hpp"
+
+
 typedef uint32_t PrimeAssetID;
 uint32_t rawFileLength;
+
 template <typename T>
 T swap_endian(T u)
 {
@@ -32,11 +36,10 @@ T swap_endian(T u)
 
     return dest.u;
 }
-int ihj = 1;
-
-
 
 PrimeAssetID tempID = 0;
+
+#pragma pack(push, 1)
 struct STRGLang {
     char langCode[4];
     uint32_t langStringOffset;
@@ -170,6 +173,26 @@ struct CMDLSurface {
     std::vector<uint16_t> pos_indices;
     std::vector<uint16_t> nml_indices;
     std::vector<uint16_t> uvc_indices;
+    void clearAll()
+    {
+        centerPoint[0] = 0;
+        centerPoint[1] = 0;
+        centerPoint[2] = 0;
+        matIndex = 0;
+        mantissa = 0;
+        displayListSize = 0;
+        parentModelPointer = 0;
+        nextSurfacePointer = 0;
+        extraDataSize = 0;
+        surfaceNormal[0] = 0;
+        surfaceNormal[1] = 0;
+        surfaceNormal[2] = 0;
+        GXFlags = 0;
+        vertexCount = 0;
+        pos_indices.clear();
+        nml_indices.clear();
+        uvc_indices.clear();
+    }
 
 };
 struct CMDLGeometry {
@@ -222,12 +245,15 @@ struct TXTR
     uint32_t mipMapCount;
     std::vector<unsigned char> PCpixels;
 };
+#pragma(pop)
 
-inline std::unordered_map<PrimeAssetID, CMDL> CMDLMap;
-inline std::unordered_map<PrimeAssetID, MLVL> MLVLMap;
-inline std::unordered_map<PrimeAssetID, STRG> STRGMap;
-inline std::unordered_map<PrimeAssetID, MREA> MREAMap;
-inline std::unordered_map<PrimeAssetID, TXTR> TXTRMap;
+
+
+std::unordered_map<PrimeAssetID, CMDL> CMDLMap;
+std::unordered_map<PrimeAssetID, MLVL> MLVLMap;
+std::unordered_map<PrimeAssetID, STRG> STRGMap;
+std::unordered_map<PrimeAssetID, MREA> MREAMap;
+std::unordered_map<PrimeAssetID, TXTR> TXTRMap;
 
 CMDL* loadCMDL(PrimeAssetID assetID, std::string pakFile);
 MLVL* loadMLVL(PrimeAssetID assetID, std::string pakFile);
@@ -259,10 +285,10 @@ std::vector<char> findAsset(PrimeAssetID assetID, std::string pakFile) {
     f.read(reinterpret_cast<char*>(&unused), sizeof(unused));
     f.read(reinterpret_cast<char*>(&assetCount_namedResourcesTable), sizeof(assetCount_namedResourcesTable));
 
-    versionNumberMajor = swap_endian<int16_t>(versionNumberMajor);
-    versionNumberMinor = swap_endian<int16_t>(versionNumberMinor);
-    unused = swap_endian<int32_t>(unused);
-    assetCount_namedResourcesTable = swap_endian<int32_t>(assetCount_namedResourcesTable);
+    versionNumberMajor = _byteswap_ushort(versionNumberMajor);
+    versionNumberMinor = _byteswap_ushort(versionNumberMinor);
+    unused = _byteswap_ulong(unused);
+    assetCount_namedResourcesTable = _byteswap_ulong(assetCount_namedResourcesTable);
 
     std::cout << "Version Number (Major)    " << versionNumberMajor << std::endl;
     std::cout << "Version Number (Minor)    " << versionNumberMinor << std::endl;
@@ -280,7 +306,7 @@ std::vector<char> findAsset(PrimeAssetID assetID, std::string pakFile) {
         f.read(fourCC, 4);
         f.read(reinterpret_cast<char*>(&AssetID), sizeof(AssetID));
         f.read(reinterpret_cast<char*>(&nameLength), sizeof(nameLength));
-        nameLength = swap_endian<int32_t>(nameLength);
+        nameLength = _byteswap_ulong(nameLength);
         nameString.resize(nameLength);
         f.read(nameString.data(), nameLength);
         std::cout << nameLength << std::endl;
@@ -290,7 +316,7 @@ std::vector<char> findAsset(PrimeAssetID assetID, std::string pakFile) {
 
     f.read(reinterpret_cast<char*>(&assetCount_resourcesTable), sizeof(assetCount_resourcesTable));
 
-    assetCount_resourcesTable = swap_endian<int32_t>(assetCount_resourcesTable);
+    assetCount_resourcesTable = _byteswap_ulong(assetCount_resourcesTable);
     std::cout << "asset count (resource table)  " << assetCount_resourcesTable << std::endl;
     int32_t compressionFlag;
     char fourCC[4];
@@ -304,10 +330,10 @@ std::vector<char> findAsset(PrimeAssetID assetID, std::string pakFile) {
         f.read(reinterpret_cast<char*>(&AssetID), sizeof(AssetID));
         f.read(reinterpret_cast<char*>(&size), sizeof(size));
         f.read(reinterpret_cast<char*>(&offset), sizeof(offset));
-        compressionFlag = swap_endian<int32_t>(compressionFlag);
-        AssetID = swap_endian<int32_t>(AssetID);
-        size = swap_endian<int32_t>(size);
-        offset = swap_endian<int32_t>(offset);
+        compressionFlag = _byteswap_ulong(compressionFlag);
+        AssetID = _byteswap_ulong(AssetID);
+        size = _byteswap_ulong(size);
+        offset = _byteswap_ulong(offset);
         //std::cout.write(fourCC, 4) << "_" << std::hex << AssetID <<std::dec<< std::endl;
     } while (AssetID != assetID);
     f.seekg(offset);
@@ -316,7 +342,7 @@ std::vector<char> findAsset(PrimeAssetID assetID, std::string pakFile) {
         int32_t decompressedSize;
 
         f.read(reinterpret_cast<char*>(&decompressedSize), sizeof(decompressedSize));
-        decompressedSize = swap_endian<int32_t>(decompressedSize);
+        decompressedSize = _byteswap_ulong(decompressedSize);
         uLong ucompSize = decompressedSize;
         std::vector<char> zlibdata;
         zlibdata.resize(size);
@@ -346,7 +372,6 @@ std::vector<char> findAsset(PrimeAssetID assetID, std::string pakFile) {
         rawFileLength = rawFile.size();
         std::cout << rawFileLength << std::endl;
         std::ofstream wf("new_data.dat", std::ios::out | std::ios::binary);
-        ihj++;
         for (int i = 0; i < rawFileLength; i++)
             wf.write(&rawFile[i], sizeof(char));
         wf.close();
@@ -515,22 +540,22 @@ void loadTXTR(std::vector<char> rawFile, PrimeAssetID AssetID)
     uint64_t subGetLoc = 0;
 
     memcpy(&TXTRMap[AssetID].imageFormat, &rawFile[subGetLoc], sizeof(TXTRMap[AssetID].imageFormat));
-    TXTRMap[AssetID].imageFormat = swap_endian<int32_t>(TXTRMap[AssetID].imageFormat);
+    TXTRMap[AssetID].imageFormat = _byteswap_ulong(TXTRMap[AssetID].imageFormat);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(TXTRMap[AssetID].imageFormat)) << "] image format:" << TXTRMap[AssetID].imageFormat << std::dec << std::endl;
     subGetLoc += sizeof(TXTRMap[AssetID].imageFormat);
 
     memcpy(&TXTRMap[AssetID].imageWidth, &rawFile[subGetLoc], sizeof(TXTRMap[AssetID].imageWidth));
-    TXTRMap[AssetID].imageWidth = swap_endian<int16_t>(TXTRMap[AssetID].imageWidth);
+    TXTRMap[AssetID].imageWidth = _byteswap_ushort(TXTRMap[AssetID].imageWidth);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(TXTRMap[AssetID].imageWidth)) << "] image width:" << std::dec << TXTRMap[AssetID].imageWidth << std::endl;
     subGetLoc += sizeof(TXTRMap[AssetID].imageWidth);
 
     memcpy(&TXTRMap[AssetID].imageHeight, &rawFile[subGetLoc], sizeof(TXTRMap[AssetID].imageHeight));
-    TXTRMap[AssetID].imageHeight = swap_endian<int16_t>(TXTRMap[AssetID].imageHeight);
+    TXTRMap[AssetID].imageHeight = _byteswap_ushort(TXTRMap[AssetID].imageHeight);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(TXTRMap[AssetID].imageHeight)) << "] image height:" << std::dec << TXTRMap[AssetID].imageHeight << std::endl;
     subGetLoc += sizeof(TXTRMap[AssetID].imageHeight);
 
     memcpy(&TXTRMap[AssetID].mipMapCount, &rawFile[subGetLoc], sizeof(TXTRMap[AssetID].mipMapCount));
-    TXTRMap[AssetID].mipMapCount = swap_endian<int32_t>(TXTRMap[AssetID].mipMapCount);
+    TXTRMap[AssetID].mipMapCount = _byteswap_ulong(TXTRMap[AssetID].mipMapCount);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(TXTRMap[AssetID].mipMapCount)) << "] mipmap count:" << std::dec << TXTRMap[AssetID].mipMapCount << std::endl;
     subGetLoc += sizeof(TXTRMap[AssetID].mipMapCount);
 
@@ -615,32 +640,32 @@ void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
     MLVLMap[AssetID].magic = 0xBAD0DADA;
     uint64_t subGetLoc = 0;
     memcpy(&MLVLMap[AssetID].magic, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].magic));
-    MLVLMap[AssetID].magic = swap_endian<int32_t>(MLVLMap[AssetID].magic);
+    MLVLMap[AssetID].magic = _byteswap_ulong(MLVLMap[AssetID].magic);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].magic)) << "] magic:" << MLVLMap[AssetID].magic << std::dec << std::endl;
     subGetLoc += sizeof(MLVLMap[AssetID].magic);
 
     memcpy(&MLVLMap[AssetID].version, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].version));
-    MLVLMap[AssetID].version = swap_endian<int32_t>(MLVLMap[AssetID].version);
+    MLVLMap[AssetID].version = _byteswap_ulong(MLVLMap[AssetID].version);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].version)) << "] version:" << MLVLMap[AssetID].version << std::dec << std::endl;
     subGetLoc += sizeof(MLVLMap[AssetID].version);
 
     memcpy(&MLVLMap[AssetID].worldNameID, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].worldNameID));
-    MLVLMap[AssetID].worldNameID = swap_endian<PrimeAssetID>(MLVLMap[AssetID].worldNameID);
+    MLVLMap[AssetID].worldNameID = _byteswap_ulong(MLVLMap[AssetID].worldNameID);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].worldNameID)) << "] worldNameID:" << MLVLMap[AssetID].worldNameID << std::dec << std::endl;
     subGetLoc += sizeof(MLVLMap[AssetID].worldNameID);
 
     memcpy(&MLVLMap[AssetID].worldSaveInfoID, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].worldSaveInfoID));
-    MLVLMap[AssetID].worldSaveInfoID = swap_endian<PrimeAssetID>(MLVLMap[AssetID].worldSaveInfoID);
+    MLVLMap[AssetID].worldSaveInfoID = _byteswap_ulong(MLVLMap[AssetID].worldSaveInfoID);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].worldSaveInfoID)) << "] worldSaveInfoID:" << MLVLMap[AssetID].worldSaveInfoID << std::dec << std::endl;
     subGetLoc += sizeof(MLVLMap[AssetID].worldSaveInfoID);
 
     memcpy(&MLVLMap[AssetID].defaultSkyboxID, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].defaultSkyboxID));
-    MLVLMap[AssetID].defaultSkyboxID = swap_endian<PrimeAssetID>(MLVLMap[AssetID].defaultSkyboxID);
+    MLVLMap[AssetID].defaultSkyboxID = _byteswap_ulong(MLVLMap[AssetID].defaultSkyboxID);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].defaultSkyboxID)) << "] defaultSkyboxID:" << MLVLMap[AssetID].defaultSkyboxID << std::dec << std::endl;
     subGetLoc += sizeof(MLVLMap[AssetID].defaultSkyboxID);
 
     memcpy(&MLVLMap[AssetID].memoryRelayCount, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].memoryRelayCount));
-    MLVLMap[AssetID].memoryRelayCount = swap_endian<int32_t>(MLVLMap[AssetID].memoryRelayCount);
+    MLVLMap[AssetID].memoryRelayCount = _byteswap_ulong(MLVLMap[AssetID].memoryRelayCount);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].memoryRelayCount)) << std::dec << "] memoryRelayCount:" << MLVLMap[AssetID].memoryRelayCount << std::endl;
     subGetLoc += sizeof(MLVLMap[AssetID].memoryRelayCount);
     MLVLMap[AssetID].memoryRelayArray.resize(MLVLMap[AssetID].memoryRelayCount);
@@ -649,17 +674,17 @@ void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
         MLVLMap[AssetID].memoryRelayArray[i].memoryRelayInstanceID = 99;//initialize key
 
         memcpy(&MLVLMap[AssetID].memoryRelayArray[i].memoryRelayInstanceID, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].memoryRelayArray[i].memoryRelayInstanceID));
-        MLVLMap[AssetID].memoryRelayArray[i].memoryRelayInstanceID = swap_endian<int32_t>(MLVLMap[AssetID].memoryRelayArray[i].memoryRelayInstanceID);
+        MLVLMap[AssetID].memoryRelayArray[i].memoryRelayInstanceID = _byteswap_ulong(MLVLMap[AssetID].memoryRelayArray[i].memoryRelayInstanceID);
         std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].memoryRelayArray[i].memoryRelayInstanceID)) << "] instace id:" << MLVLMap[AssetID].memoryRelayArray[i].memoryRelayInstanceID << std::dec << std::endl;
         subGetLoc += sizeof(MLVLMap[AssetID].memoryRelayArray[i].memoryRelayInstanceID);
 
         memcpy(&MLVLMap[AssetID].memoryRelayArray[i].targetInstanceID, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].memoryRelayArray[i].targetInstanceID));
-        MLVLMap[AssetID].memoryRelayArray[i].targetInstanceID = swap_endian<int32_t>(MLVLMap[AssetID].memoryRelayArray[i].targetInstanceID);
+        MLVLMap[AssetID].memoryRelayArray[i].targetInstanceID = _byteswap_ulong(MLVLMap[AssetID].memoryRelayArray[i].targetInstanceID);
         std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].memoryRelayArray[i].targetInstanceID)) << "] targetInstanceID:" << MLVLMap[AssetID].memoryRelayArray[i].targetInstanceID << std::dec << std::endl;
         subGetLoc += sizeof(MLVLMap[AssetID].memoryRelayArray[i].targetInstanceID);
 
         memcpy(&MLVLMap[AssetID].memoryRelayArray[i].message, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].memoryRelayArray[i].message));
-        MLVLMap[AssetID].memoryRelayArray[i].message = swap_endian<int16_t>(MLVLMap[AssetID].memoryRelayArray[i].message);
+        MLVLMap[AssetID].memoryRelayArray[i].message = _byteswap_ushort(MLVLMap[AssetID].memoryRelayArray[i].message);
         std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].memoryRelayArray[i].message)) << std::dec << "] message:" << MLVLMap[AssetID].memoryRelayArray[i].message << std::endl;
         subGetLoc += sizeof(MLVLMap[AssetID].memoryRelayArray[i].message);
 
@@ -669,12 +694,12 @@ void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
     }
 
     memcpy(&MLVLMap[AssetID].areaCount, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaCount));
-    MLVLMap[AssetID].areaCount = swap_endian<int32_t>(MLVLMap[AssetID].areaCount);
+    MLVLMap[AssetID].areaCount = _byteswap_ulong(MLVLMap[AssetID].areaCount);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].areaCount)) << std::dec << "] areaCount:" << MLVLMap[AssetID].areaCount << std::endl;
     subGetLoc += sizeof(MLVLMap[AssetID].areaCount);
 
     memcpy(&MLVLMap[AssetID].garbage1, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].garbage1));
-    MLVLMap[AssetID].garbage1 = swap_endian<int32_t>(MLVLMap[AssetID].garbage1);
+    MLVLMap[AssetID].garbage1 = _byteswap_ulong(MLVLMap[AssetID].garbage1);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].garbage1)) << std::dec << "] garbage1 (always 1):" << MLVLMap[AssetID].garbage1 << std::endl;
     subGetLoc += sizeof(MLVLMap[AssetID].garbage1);
 
@@ -682,7 +707,7 @@ void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
     for (int i = 0; i < MLVLMap[AssetID].areaCount; i++)
     {
         memcpy(&MLVLMap[AssetID].areaArray[i].areaNameID, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaArray[i].areaNameID));
-        MLVLMap[AssetID].areaArray[i].areaNameID = swap_endian<int32_t>(MLVLMap[AssetID].areaArray[i].areaNameID);
+        MLVLMap[AssetID].areaArray[i].areaNameID = _byteswap_ulong(MLVLMap[AssetID].areaArray[i].areaNameID);
         std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].areaArray[i].areaNameID)) << "] area name ID:" << MLVLMap[AssetID].areaArray[i].areaNameID << std::dec << std::endl;
         subGetLoc += sizeof(MLVLMap[AssetID].areaArray[i].areaNameID);
 
@@ -701,17 +726,17 @@ void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
         }
 
         memcpy(&MLVLMap[AssetID].areaArray[i].areaMREA_ID, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaArray[i].areaMREA_ID));
-        MLVLMap[AssetID].areaArray[i].areaMREA_ID = swap_endian<int32_t>(MLVLMap[AssetID].areaArray[i].areaMREA_ID);
+        MLVLMap[AssetID].areaArray[i].areaMREA_ID = _byteswap_ulong(MLVLMap[AssetID].areaArray[i].areaMREA_ID);
         std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].areaArray[i].areaMREA_ID)) << "] area MREA ID:" << MLVLMap[AssetID].areaArray[i].areaMREA_ID << std::dec << std::endl;
         subGetLoc += sizeof(MLVLMap[AssetID].areaArray[i].areaMREA_ID);
 
         memcpy(&MLVLMap[AssetID].areaArray[i].internalAreaID, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaArray[i].internalAreaID));
-        MLVLMap[AssetID].areaArray[i].internalAreaID = swap_endian<int32_t>(MLVLMap[AssetID].areaArray[i].internalAreaID);
+        MLVLMap[AssetID].areaArray[i].internalAreaID = _byteswap_ulong(MLVLMap[AssetID].areaArray[i].internalAreaID);
         std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].areaArray[i].internalAreaID)) << "] internalAreaID:" << MLVLMap[AssetID].areaArray[i].internalAreaID << std::dec << std::endl;
         subGetLoc += sizeof(MLVLMap[AssetID].areaArray[i].internalAreaID);
 
         memcpy(&MLVLMap[AssetID].areaArray[i].attachedAreaCount, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaArray[i].attachedAreaCount));
-        MLVLMap[AssetID].areaArray[i].attachedAreaCount = swap_endian<int32_t>(MLVLMap[AssetID].areaArray[i].attachedAreaCount);
+        MLVLMap[AssetID].areaArray[i].attachedAreaCount = _byteswap_ulong(MLVLMap[AssetID].areaArray[i].attachedAreaCount);
         std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].areaArray[i].attachedAreaCount)) << "] attachedAreaCount:" << std::dec << MLVLMap[AssetID].areaArray[i].attachedAreaCount << std::endl;
         subGetLoc += sizeof(MLVLMap[AssetID].areaArray[i].attachedAreaCount);
 
@@ -720,18 +745,18 @@ void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
         for (int j = 0; j < MLVLMap[AssetID].areaArray[i].attachedAreaCount; j++)
         {
             memcpy(&MLVLMap[AssetID].areaArray[i].attachedAreaIndexArray[j], &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaArray[i].attachedAreaIndexArray[j]));
-            MLVLMap[AssetID].areaArray[i].attachedAreaIndexArray[j] = swap_endian<uint16_t>(MLVLMap[AssetID].areaArray[i].attachedAreaIndexArray[j]);
+            MLVLMap[AssetID].areaArray[i].attachedAreaIndexArray[j] = _byteswap_ushort(MLVLMap[AssetID].areaArray[i].attachedAreaIndexArray[j]);
             std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].areaArray[i].attachedAreaIndexArray[j])) << "] attachedAreaIndex:" << std::dec << MLVLMap[AssetID].areaArray[i].attachedAreaIndexArray[j] << std::endl;
             subGetLoc += sizeof(MLVLMap[AssetID].areaArray[i].attachedAreaIndexArray[j]);
         }
 
         memcpy(&MLVLMap[AssetID].areaArray[i].dependencies.garbage, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaArray[i].dependencies.garbage));
-        MLVLMap[AssetID].areaArray[i].dependencies.garbage = swap_endian<int32_t>(MLVLMap[AssetID].areaArray[i].dependencies.garbage);
+        MLVLMap[AssetID].areaArray[i].dependencies.garbage = _byteswap_ulong(MLVLMap[AssetID].areaArray[i].dependencies.garbage);
         std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].areaArray[i].dependencies.garbage)) << "] garbage (always 0):" << std::dec << MLVLMap[AssetID].areaArray[i].dependencies.garbage << std::endl;
         subGetLoc += sizeof(MLVLMap[AssetID].areaArray[i].dependencies.garbage);
 
         memcpy(&MLVLMap[AssetID].areaArray[i].dependencies.dependencyCount, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaArray[i].dependencies.dependencyCount));
-        MLVLMap[AssetID].areaArray[i].dependencies.dependencyCount = swap_endian<int32_t>(MLVLMap[AssetID].areaArray[i].dependencies.dependencyCount);
+        MLVLMap[AssetID].areaArray[i].dependencies.dependencyCount = _byteswap_ulong(MLVLMap[AssetID].areaArray[i].dependencies.dependencyCount);
         std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].areaArray[i].dependencies.dependencyCount)) << "] dependencyCount:" << std::dec << MLVLMap[AssetID].areaArray[i].dependencies.dependencyCount << std::endl;
         subGetLoc += sizeof(MLVLMap[AssetID].areaArray[i].dependencies.dependencyCount);
 
@@ -739,7 +764,7 @@ void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
         for (int j = 0; j < MLVLMap[AssetID].areaArray[i].dependencies.dependencyCount; j++)
         {
             memcpy(&MLVLMap[AssetID].areaArray[i].dependencies.dependecyArray[j].dependencyAssetID, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaArray[i].dependencies.dependecyArray[j].dependencyAssetID));
-            MLVLMap[AssetID].areaArray[i].dependencies.dependecyArray[j].dependencyAssetID = swap_endian<int32_t>(MLVLMap[AssetID].areaArray[i].dependencies.dependecyArray[j].dependencyAssetID);
+            MLVLMap[AssetID].areaArray[i].dependencies.dependecyArray[j].dependencyAssetID = _byteswap_ulong(MLVLMap[AssetID].areaArray[i].dependencies.dependecyArray[j].dependencyAssetID);
             //std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].areaArray[i].dependencies.dependecyArray[j].dependencyAssetID)) << "] dependency ID:" << MLVLMap[AssetID].areaArray[i].dependencies.dependecyArray[j].dependencyAssetID << std::dec << std::endl;
             subGetLoc += sizeof(MLVLMap[AssetID].areaArray[i].dependencies.dependecyArray[j].dependencyAssetID);
 
@@ -749,7 +774,7 @@ void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
         }
 
         memcpy(&MLVLMap[AssetID].areaArray[i].dependencies.dependecyOffsetCount, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaArray[i].dependencies.dependecyOffsetCount));
-        MLVLMap[AssetID].areaArray[i].dependencies.dependecyOffsetCount = swap_endian<int32_t>(MLVLMap[AssetID].areaArray[i].dependencies.dependecyOffsetCount);
+        MLVLMap[AssetID].areaArray[i].dependencies.dependecyOffsetCount = _byteswap_ulong(MLVLMap[AssetID].areaArray[i].dependencies.dependecyOffsetCount);
         std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].areaArray[i].dependencies.dependecyOffsetCount)) << "] dependecyOffsetCount:" << std::dec << MLVLMap[AssetID].areaArray[i].dependencies.dependecyOffsetCount << std::endl;
         subGetLoc += sizeof(MLVLMap[AssetID].areaArray[i].dependencies.dependecyOffsetCount);
 
@@ -757,13 +782,13 @@ void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
         for (int j = 0; j < MLVLMap[AssetID].areaArray[i].dependencies.dependecyOffsetCount; j++)
         {
             memcpy(&MLVLMap[AssetID].areaArray[i].dependencies.dependencyOffsetArray[j], &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaArray[i].dependencies.dependencyOffsetArray[j]));
-            MLVLMap[AssetID].areaArray[i].dependencies.dependencyOffsetArray[j] = swap_endian<int32_t>(MLVLMap[AssetID].areaArray[i].dependencies.dependencyOffsetArray[j]);
+            MLVLMap[AssetID].areaArray[i].dependencies.dependencyOffsetArray[j] = _byteswap_ulong(MLVLMap[AssetID].areaArray[i].dependencies.dependencyOffsetArray[j]);
             std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].areaArray[i].dependencies.dependencyOffsetArray[j])) << "] dependecy offset:" << std::dec << MLVLMap[AssetID].areaArray[i].dependencies.dependencyOffsetArray[j] << std::endl;
             subGetLoc += sizeof(MLVLMap[AssetID].areaArray[i].dependencies.dependencyOffsetArray[j]);
         }
 
         memcpy(&MLVLMap[AssetID].areaArray[i].dockCount, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaArray[i].dockCount));
-        MLVLMap[AssetID].areaArray[i].dockCount = swap_endian<int32_t>(MLVLMap[AssetID].areaArray[i].dockCount);
+        MLVLMap[AssetID].areaArray[i].dockCount = _byteswap_ulong(MLVLMap[AssetID].areaArray[i].dockCount);
         std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].areaArray[i].dockCount)) << "] dockCount:" << std::dec << MLVLMap[AssetID].areaArray[i].dockCount << std::endl;
         subGetLoc += sizeof(MLVLMap[AssetID].areaArray[i].dockCount);
 
@@ -771,7 +796,7 @@ void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
         for (int j = 0; j < MLVLMap[AssetID].areaArray[i].dockCount; j++)
         {
             memcpy(&MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockCount, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockCount));
-            MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockCount = swap_endian<int32_t>(MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockCount);
+            MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockCount = _byteswap_ulong(MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockCount);
             std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockCount)) << "] dockCount:" << std::dec << MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockCount << std::endl;
             subGetLoc += sizeof(MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockCount);
 
@@ -779,18 +804,18 @@ void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
             for (int k = 0; k < MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockCount; k++)
             {
                 memcpy(&MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockArray[k].areaIndex, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockArray[k].areaIndex));
-                MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockArray[k].areaIndex = swap_endian<int32_t>(MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockArray[k].areaIndex);
+                MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockArray[k].areaIndex = _byteswap_ulong(MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockArray[k].areaIndex);
                 std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockArray[k].areaIndex)) << "] connecting Dock Area Index:" << std::dec << MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockArray[k].areaIndex << std::endl;
                 subGetLoc += sizeof(MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockArray[k].areaIndex);
 
                 memcpy(&MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockArray[k].dockIndex, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockArray[k].dockIndex));
-                MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockArray[k].dockIndex = swap_endian<int32_t>(MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockArray[k].dockIndex);
+                MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockArray[k].dockIndex = _byteswap_ulong(MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockArray[k].dockIndex);
                 std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockArray[k].dockIndex)) << "] connecting Dock Index:" << std::dec << MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockArray[k].dockIndex << std::endl;
                 subGetLoc += sizeof(MLVLMap[AssetID].areaArray[i].dockArray[j].connectingDockArray[k].dockIndex);
             }
 
             memcpy(&MLVLMap[AssetID].areaArray[i].dockArray[j].dockCoordinateCount, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaArray[i].dockArray[j].dockCoordinateCount));
-            MLVLMap[AssetID].areaArray[i].dockArray[j].dockCoordinateCount = swap_endian<int32_t>(MLVLMap[AssetID].areaArray[i].dockArray[j].dockCoordinateCount);
+            MLVLMap[AssetID].areaArray[i].dockArray[j].dockCoordinateCount = _byteswap_ulong(MLVLMap[AssetID].areaArray[i].dockArray[j].dockCoordinateCount);
             std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].areaArray[i].dockArray[j].dockCoordinateCount)) << "] dockCoordinateCount:" << std::dec << MLVLMap[AssetID].areaArray[i].dockArray[j].dockCoordinateCount << std::endl;
             subGetLoc += sizeof(MLVLMap[AssetID].areaArray[i].dockArray[j].dockCoordinateCount);
 
@@ -802,7 +827,7 @@ void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
                 for (int l = 0; l < 3; l++)
                 {
                     memcpy(&MLVLMap[AssetID].areaArray[i].dockArray[j].dockDoordinates[k][l], &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaArray[i].dockArray[j].dockDoordinates[k][l]));
-                    MLVLMap[AssetID].areaArray[i].dockArray[j].dockDoordinates[k][l] = swap_endian<int32_t>(MLVLMap[AssetID].areaArray[i].dockArray[j].dockDoordinates[k][l]);
+                    MLVLMap[AssetID].areaArray[i].dockArray[j].dockDoordinates[k][l] = _byteswap_ulong(MLVLMap[AssetID].areaArray[i].dockArray[j].dockDoordinates[k][l]);
                     subGetLoc += sizeof(MLVLMap[AssetID].areaArray[i].dockArray[j].dockDoordinates[k][l]);
                 }
                 std::cout << std::hex << "[" << (subGetLoc - sizeof(MLVLMap[AssetID].areaArray[i].dockArray[j].dockDoordinates[k][0]) * 3) << " :: " << (subGetLoc) << "] dockCoordinates:" << std::dec << MLVLMap[AssetID].areaArray[i].dockArray[j].dockDoordinates[k][0] << ", " << MLVLMap[AssetID].areaArray[i].dockArray[j].dockDoordinates[k][0] << ", " << MLVLMap[AssetID].areaArray[i].dockArray[j].dockDoordinates[k][0] << std::endl;
@@ -814,7 +839,7 @@ void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
     }
 
     memcpy(&MLVLMap[AssetID].worldMapID, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].worldMapID));
-    MLVLMap[AssetID].worldMapID = swap_endian<PrimeAssetID>(MLVLMap[AssetID].worldMapID);
+    MLVLMap[AssetID].worldMapID = _byteswap_ulong(MLVLMap[AssetID].worldMapID);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].worldMapID)) << "] worldMapID:" << MLVLMap[AssetID].worldMapID << std::dec << std::endl;
     subGetLoc += sizeof(MLVLMap[AssetID].worldMapID);
 
@@ -823,12 +848,12 @@ void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
     subGetLoc += sizeof(MLVLMap[AssetID].garbage2);
 
     memcpy(&MLVLMap[AssetID].scriptInstanceCount, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].scriptInstanceCount));
-    MLVLMap[AssetID].scriptInstanceCount = swap_endian<uint32_t>(MLVLMap[AssetID].scriptInstanceCount);
+    MLVLMap[AssetID].scriptInstanceCount = _byteswap_ulong(MLVLMap[AssetID].scriptInstanceCount);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].scriptInstanceCount)) << "] scriptInstanceCount:" << std::dec << MLVLMap[AssetID].scriptInstanceCount << std::endl;
     subGetLoc += sizeof(MLVLMap[AssetID].scriptInstanceCount);
 
     memcpy(&MLVLMap[AssetID].audioGroupCount, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].audioGroupCount));
-    MLVLMap[AssetID].audioGroupCount = swap_endian<uint32_t>(MLVLMap[AssetID].audioGroupCount);
+    MLVLMap[AssetID].audioGroupCount = _byteswap_ulong(MLVLMap[AssetID].audioGroupCount);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].audioGroupCount)) << "] audioGroupCount:" << std::dec << MLVLMap[AssetID].audioGroupCount << std::endl;
     subGetLoc += sizeof(MLVLMap[AssetID].audioGroupCount);
 
@@ -837,12 +862,12 @@ void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
     for (int i = 0; i < MLVLMap[AssetID].audioGroupCount; i++)
     {
         memcpy(&MLVLMap[AssetID].audioGroupArray[i].groupID, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].audioGroupArray[i].groupID));
-        MLVLMap[AssetID].audioGroupArray[i].groupID = swap_endian<uint32_t>(MLVLMap[AssetID].audioGroupArray[i].groupID);
+        MLVLMap[AssetID].audioGroupArray[i].groupID = _byteswap_ulong(MLVLMap[AssetID].audioGroupArray[i].groupID);
         std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].audioGroupArray[i].groupID)) << "] audio group ID:" << MLVLMap[AssetID].audioGroupArray[i].groupID << std::dec << std::endl;
         subGetLoc += sizeof(MLVLMap[AssetID].audioGroupArray[i].groupID);
 
         memcpy(&MLVLMap[AssetID].audioGroupArray[i].AGSC_ID, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].audioGroupArray[i].AGSC_ID));
-        MLVLMap[AssetID].audioGroupArray[i].AGSC_ID = swap_endian<PrimeAssetID>(MLVLMap[AssetID].audioGroupArray[i].AGSC_ID);
+        MLVLMap[AssetID].audioGroupArray[i].AGSC_ID = _byteswap_ulong(MLVLMap[AssetID].audioGroupArray[i].AGSC_ID);
         std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].audioGroupArray[i].AGSC_ID)) << "] AGSC_ID:" << MLVLMap[AssetID].audioGroupArray[i].AGSC_ID << std::dec << std::endl;
         subGetLoc += sizeof(MLVLMap[AssetID].audioGroupArray[i].AGSC_ID);
     }
@@ -852,7 +877,7 @@ void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
     subGetLoc += sizeof(MLVLMap[AssetID].garbage3);
 
     memcpy(&MLVLMap[AssetID].garbage4, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].garbage4));
-    MLVLMap[AssetID].garbage4 = swap_endian<uint32_t>(MLVLMap[AssetID].garbage4);
+    MLVLMap[AssetID].garbage4 = _byteswap_ulong(MLVLMap[AssetID].garbage4);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].garbage4)) << "] garbage4 (equal to area count):" << std::dec << MLVLMap[AssetID].garbage4 << std::endl;
     subGetLoc += sizeof(MLVLMap[AssetID].garbage4);
 
@@ -860,17 +885,17 @@ void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
     for (int i = 0; i < MLVLMap[AssetID].areaCount; i++)
     {
         memcpy(&MLVLMap[AssetID].areaLayerFlags[i].layerCount, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaLayerFlags[i].layerCount));
-        MLVLMap[AssetID].areaLayerFlags[i].layerCount = swap_endian<uint32_t>(MLVLMap[AssetID].areaLayerFlags[i].layerCount);
+        MLVLMap[AssetID].areaLayerFlags[i].layerCount = _byteswap_ulong(MLVLMap[AssetID].areaLayerFlags[i].layerCount);
         subGetLoc += sizeof(MLVLMap[AssetID].areaLayerFlags[i].layerCount);
 
         memcpy(&MLVLMap[AssetID].areaLayerFlags[i].layerFlags, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaLayerFlags[i].layerFlags));
-        MLVLMap[AssetID].areaLayerFlags[i].layerFlags = swap_endian<uint64_t>(MLVLMap[AssetID].areaLayerFlags[i].layerFlags);
+        MLVLMap[AssetID].areaLayerFlags[i].layerFlags = _byteswap_uint64(MLVLMap[AssetID].areaLayerFlags[i].layerFlags);
         std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].areaLayerFlags[i].layerFlags)) << "] layer " << MLVLMap[AssetID].areaLayerFlags[i].layerCount << " flags:" << std::dec << MLVLMap[AssetID].areaLayerFlags[i].layerFlags << std::endl;
         subGetLoc += sizeof(MLVLMap[AssetID].areaLayerFlags[i].layerFlags);
     }
 
     memcpy(&MLVLMap[AssetID].layerNameCount, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].layerNameCount));
-    MLVLMap[AssetID].layerNameCount = swap_endian<uint32_t>(MLVLMap[AssetID].layerNameCount);
+    MLVLMap[AssetID].layerNameCount = _byteswap_ulong(MLVLMap[AssetID].layerNameCount);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].layerNameCount)) << "] layerNameCount:" << std::dec << MLVLMap[AssetID].layerNameCount << std::endl;
     subGetLoc += sizeof(MLVLMap[AssetID].layerNameCount);
 
@@ -894,7 +919,7 @@ void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
     }
 
     memcpy(&MLVLMap[AssetID].garbage5, &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].garbage5));
-    MLVLMap[AssetID].garbage5 = swap_endian<uint32_t>(MLVLMap[AssetID].garbage5);
+    MLVLMap[AssetID].garbage5 = _byteswap_ulong(MLVLMap[AssetID].garbage5);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].garbage5)) << "] garbage5 (equal to area count):" << std::dec << MLVLMap[AssetID].garbage5 << std::endl;
     subGetLoc += sizeof(MLVLMap[AssetID].garbage5);
 
@@ -903,7 +928,7 @@ void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
     for (int i = 0; i < MLVLMap[AssetID].areaCount; i++)
     {
         memcpy(&MLVLMap[AssetID].areaLayerNameOffsetArray[i], &rawFile[subGetLoc], sizeof(MLVLMap[AssetID].areaLayerNameOffsetArray[i]));
-        MLVLMap[AssetID].areaLayerNameOffsetArray[i] = swap_endian<uint32_t>(MLVLMap[AssetID].areaLayerNameOffsetArray[i]);
+        MLVLMap[AssetID].areaLayerNameOffsetArray[i] = _byteswap_ulong(MLVLMap[AssetID].areaLayerNameOffsetArray[i]);
         std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(MLVLMap[AssetID].areaLayerNameOffsetArray[i])) << "] areaLayerNameOffset:" << std::dec << MLVLMap[AssetID].areaLayerNameOffsetArray[i] << std::endl;
         subGetLoc += sizeof(MLVLMap[AssetID].areaLayerNameOffsetArray[i]);
     }
@@ -916,22 +941,22 @@ void loadSTRG(std::vector<char> rawFile, PrimeAssetID AssetID)
     STRGMap[AssetID].magic = 0xBAD0DADA;
 
     memcpy(&STRGMap[AssetID].magic, &rawFile[subGetLoc], sizeof(STRGMap[AssetID].magic));
-    STRGMap[AssetID].magic = swap_endian<int32_t>(STRGMap[AssetID].magic);
+    STRGMap[AssetID].magic = _byteswap_ulong(STRGMap[AssetID].magic);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(STRGMap[AssetID].magic)) << "] magic:" << STRGMap[AssetID].magic << std::dec << std::endl;
     subGetLoc += sizeof(STRGMap[AssetID].magic);
 
     memcpy(&STRGMap[AssetID].version, &rawFile[subGetLoc], sizeof(STRGMap[AssetID].version));
-    STRGMap[AssetID].version = swap_endian<int32_t>(STRGMap[AssetID].version);
+    STRGMap[AssetID].version = _byteswap_ulong(STRGMap[AssetID].version);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(STRGMap[AssetID].version)) << "] version:" << STRGMap[AssetID].version << std::dec << std::endl;
     subGetLoc += sizeof(STRGMap[AssetID].version);
 
     memcpy(&STRGMap[AssetID].langCount, &rawFile[subGetLoc], sizeof(STRGMap[AssetID].langCount));
-    STRGMap[AssetID].langCount = swap_endian<int32_t>(STRGMap[AssetID].langCount);
+    STRGMap[AssetID].langCount = _byteswap_ulong(STRGMap[AssetID].langCount);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(STRGMap[AssetID].langCount)) << "] langCount:" << STRGMap[AssetID].langCount << std::dec << std::endl;
     subGetLoc += sizeof(STRGMap[AssetID].langCount);
 
     memcpy(&STRGMap[AssetID].stringCount, &rawFile[subGetLoc], sizeof(STRGMap[AssetID].stringCount));
-    STRGMap[AssetID].stringCount = swap_endian<int32_t>(STRGMap[AssetID].stringCount);
+    STRGMap[AssetID].stringCount = _byteswap_ulong(STRGMap[AssetID].stringCount);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(STRGMap[AssetID].stringCount)) << "] stringCount:" << STRGMap[AssetID].stringCount << std::dec << std::endl;
     subGetLoc += sizeof(STRGMap[AssetID].stringCount);
 
@@ -944,7 +969,7 @@ void loadSTRG(std::vector<char> rawFile, PrimeAssetID AssetID)
         subGetLoc += 4;
 
         memcpy(&STRGMap[AssetID].langTable[i].langStringOffset, &rawFile[subGetLoc], sizeof(STRGMap[AssetID].langTable[i].langStringOffset));
-        STRGMap[AssetID].langTable[i].langStringOffset = swap_endian<int32_t>(STRGMap[AssetID].langTable[i].langStringOffset);
+        STRGMap[AssetID].langTable[i].langStringOffset = _byteswap_ulong(STRGMap[AssetID].langTable[i].langStringOffset);
         std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(STRGMap[AssetID].langTable[i].langStringOffset)) << "] posOffset:" << STRGMap[AssetID].langTable[i].langStringOffset << std::dec << std::endl;
         subGetLoc += sizeof(STRGMap[AssetID].langTable[i].langStringOffset);
     }
@@ -955,7 +980,7 @@ void loadSTRG(std::vector<char> rawFile, PrimeAssetID AssetID)
         //uint32_t stringTableSize;
 
         memcpy(&STRGMap[AssetID].stringTables[i].STRGTableSize, &rawFile[subGetLoc], sizeof(STRGMap[AssetID].stringTables[i].STRGTableSize));
-        STRGMap[AssetID].stringTables[i].STRGTableSize = swap_endian<int32_t>(STRGMap[AssetID].stringTables[i].STRGTableSize);
+        STRGMap[AssetID].stringTables[i].STRGTableSize = _byteswap_ulong(STRGMap[AssetID].stringTables[i].STRGTableSize);
         std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(STRGMap[AssetID].stringTables[i].STRGTableSize)) << "] STRGTableSize:" << std::dec << STRGMap[AssetID].stringTables[i].STRGTableSize << std::endl;
         subGetLoc += sizeof(STRGMap[AssetID].stringTables[i].STRGTableSize);
 
@@ -966,7 +991,7 @@ void loadSTRG(std::vector<char> rawFile, PrimeAssetID AssetID)
         {
 
             memcpy(&STRGMap[AssetID].stringTables[i].stringOffsets[i * STRGMap[AssetID].stringCount + j], &rawFile[subGetLoc], sizeof(STRGMap[AssetID].stringTables[i].stringOffsets[i * STRGMap[AssetID].stringCount + j]));
-            STRGMap[AssetID].stringTables[i].stringOffsets[i * STRGMap[AssetID].stringCount + j] = swap_endian<int32_t>(STRGMap[AssetID].stringTables[i].stringOffsets[i * STRGMap[AssetID].stringCount + j]);
+            STRGMap[AssetID].stringTables[i].stringOffsets[i * STRGMap[AssetID].stringCount + j] = _byteswap_ulong(STRGMap[AssetID].stringTables[i].stringOffsets[i * STRGMap[AssetID].stringCount + j]);
             std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(STRGMap[AssetID].stringTables[i].stringOffsets[j])) << "] stringOffsets:" << std::dec << STRGMap[AssetID].stringTables[i].stringOffsets[i * STRGMap[AssetID].stringCount + j] << std::endl;
             subGetLoc += sizeof(STRGMap[AssetID].stringTables[i].stringOffsets[i * STRGMap[AssetID].stringCount + j]);
         }
@@ -997,49 +1022,50 @@ void loadSTRG(std::vector<char> rawFile, PrimeAssetID AssetID)
 }
 void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
 {
+    CMDLMap[AssetID].magic = 0xBAD0DADA;
+    CMDLMap[AssetID].geometry.shortUVCoords.reserve(9999);
+    CMDLMap[AssetID].geometry.vertexCoords.reserve(9999);
+    CMDLMap[AssetID].geometry.surfaces.reserve(9999);
+
+
     //malloc(999999);
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
-    CMDLMap[AssetID].magic = 0xbad0dada;
-    uint64_t subGetLoc = 0;
-    memcpy(&CMDLMap[AssetID].magic, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].magic));
-    CMDLMap[AssetID].magic = swap_endian<int32_t>(CMDLMap[AssetID].magic);
-    std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].magic)) << "] magic:" << CMDLMap[AssetID].magic << std::dec << std::endl;
+    FileReader reader;
+    reader.init((uint8_t*)rawFile.data());
 
+    uint64_t subGetLoc = 0;
+    reader.readInt32(&CMDLMap[AssetID].magic);
+    std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].magic)) << "] magic:" << CMDLMap[AssetID].magic << std::dec << std::endl;
     subGetLoc += sizeof(CMDLMap[AssetID].magic);
 
-    memcpy(&CMDLMap[AssetID].version, &rawFile[subGetLoc], 4);
-    CMDLMap[AssetID].version = swap_endian<int32_t>(CMDLMap[AssetID].version);
+    reader.readInt32(&CMDLMap[AssetID].version); 
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].version)) << "] version:" << CMDLMap[AssetID].version << std::dec << std::endl;
     subGetLoc += sizeof(CMDLMap[AssetID].version);
-
-    memcpy(&CMDLMap[AssetID].flags, &rawFile[subGetLoc], 4);
-    CMDLMap[AssetID].flags = swap_endian<int32_t>(CMDLMap[AssetID].flags);
+    
+    reader.readInt32(&CMDLMap[AssetID].flags);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].flags)) << "] flags:" << std::endl;
-    subGetLoc += sizeof(CMDLMap[AssetID].flags);
     std::cout << "\tIndicates the model is skinned: " << ((CMDLMap[AssetID].flags & 0x1) > 0 ? "1" : "0") << std::endl;
     std::cout << "\tToggle short normals:           " << ((CMDLMap[AssetID].flags & 0x2) > 0 ? "1" : "0") << std::endl;
     std::cout << "\tEnable short UV array:          " << ((CMDLMap[AssetID].flags & 0x4) > 0 ? "1" : "0") << std::endl;
     bool halfPrecisionNormals = ((CMDLMap[AssetID].flags & 0x2) > 0);
     bool halfPrecisionUVs = ((CMDLMap[AssetID].flags & 0x4) > 0);
+    subGetLoc += sizeof(CMDLMap[AssetID].flags);
 
-    memcpy(CMDLMap[AssetID].ModelAxisAlignedBoundingBox, &rawFile[subGetLoc], sizeof(float) * 6);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(float) * 6) << "] Model Axis-Aligned Bounding Box:";
     for (int ijk = 0; ijk < 6; ijk++)
     {
-        CMDLMap[AssetID].ModelAxisAlignedBoundingBox[ijk] = swap_endian<float>(CMDLMap[AssetID].ModelAxisAlignedBoundingBox[ijk]);
+        reader.readFloat(&(CMDLMap[AssetID].ModelAxisAlignedBoundingBox[ijk]));
         std::cout << CMDLMap[AssetID].ModelAxisAlignedBoundingBox[ijk];
     }
     std::cout << std::dec << std::endl;
     subGetLoc += sizeof(float) * 6;
 
-    memcpy(&CMDLMap[AssetID].dataSectionCount, &rawFile[subGetLoc], 4);
-    CMDLMap[AssetID].dataSectionCount = swap_endian<int32_t>(CMDLMap[AssetID].dataSectionCount);
+    reader.readInt32(&CMDLMap[AssetID].dataSectionCount);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].dataSectionCount)) << "] data Section Count:" << CMDLMap[AssetID].dataSectionCount << std::dec << std::endl;
     subGetLoc += sizeof(CMDLMap[AssetID].dataSectionCount);
 
-    memcpy(&CMDLMap[AssetID].MaterialSetCount, &rawFile[subGetLoc], 4);
-    CMDLMap[AssetID].MaterialSetCount = swap_endian<int32_t>(CMDLMap[AssetID].MaterialSetCount);
+    reader.readInt32(&CMDLMap[AssetID].MaterialSetCount);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].MaterialSetCount)) << "] Material Set Count:" << CMDLMap[AssetID].MaterialSetCount << std::dec << std::endl;
     subGetLoc += sizeof(CMDLMap[AssetID].MaterialSetCount);
 
@@ -1049,457 +1075,437 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
 
     for (int ijk = 0; ijk < CMDLMap[AssetID].dataSectionCount; ijk++)
     {
-        memcpy(&CMDLMap[AssetID].dataSectionSizes[ijk], &rawFile[subGetLoc], sizeof(uint32_t));
-        CMDLMap[AssetID].dataSectionSizes[ijk] = swap_endian<uint32_t>(CMDLMap[AssetID].dataSectionSizes[ijk]);
+        reader.readInt32(&CMDLMap[AssetID].dataSectionSizes[ijk]);
+
         std::cout << std::hex << "[" << subGetLoc << " :: " << subGetLoc + sizeof(uint32_t) << "]" << "data section " << std::dec << ijk << " size: " << CMDLMap[AssetID].dataSectionSizes[ijk] << std::endl;
         subGetLoc += sizeof(uint32_t);
 
     }
-
+    reader.seekBoundary32();
     subGetLoc += 32 - subGetLoc % 32;
 
     uint32_t upperGetLoc = subGetLoc;
     std::cout << "reading material data from " << std::hex << subGetLoc << std::dec << std::endl;
 
 
-    if (true)
-        for (int imat = 0; imat < CMDLMap[AssetID].MaterialSetCount; imat++)
+    for (int imat = 0; imat < CMDLMap[AssetID].MaterialSetCount; imat++)
+    {
+        reader.readInt32(&CMDLMap[AssetID].materialSets[imat].textureCount);
+        subGetLoc += sizeof(CMDLMap[AssetID].materialSets[imat].textureCount);
+        std::cout << "textures: " << CMDLMap[AssetID].materialSets[imat].textureCount << std::endl;
+        CMDLMap[AssetID].materialSets[imat].textureFileIDs.resize(CMDLMap[AssetID].materialSets[imat].textureCount);
+        
+        for (int tx = 0; tx < CMDLMap[AssetID].materialSets[imat].textureCount; tx++) {
+            reader.readInt32(&CMDLMap[AssetID].materialSets[imat].textureFileIDs[tx]);
+            std::cout << "texture used: " << std::hex << CMDLMap[AssetID].materialSets[imat].textureFileIDs[tx] << std::dec << std::endl;
+            subGetLoc += sizeof(CMDLMap[AssetID].materialSets[imat].textureFileIDs[tx]);
+        }
+
+
+        reader.readInt32(&(CMDLMap[AssetID].materialSets[imat].materialCount));
+        std::cout << CMDLMap[AssetID].materialSets[imat].materialCount << std::endl;
+        subGetLoc += sizeof(CMDLMap[AssetID].materialSets[imat].materialCount);
+        
+        CMDLMap[AssetID].materialSets[imat].materialEndOffsets.resize(CMDLMap[AssetID].materialSets[imat].materialCount);
+        for (int mc = 0; mc < CMDLMap[AssetID].materialSets[imat].materialCount; mc++) {
+            reader.readInt32(&CMDLMap[AssetID].materialSets[imat].materialEndOffsets[mc]);
+            std::cout << "material end offset: " << std::hex << CMDLMap[AssetID].materialSets[imat].materialEndOffsets[mc] << std::dec << std::endl;
+        }
+        subGetLoc += CMDLMap[AssetID].materialSets[imat].materialCount * sizeof(uint32_t);
+
+        uint32_t materialStartingMarker = subGetLoc;
+
+        CMDLMap[AssetID].materialSets[imat].materials.resize(CMDLMap[AssetID].materialSets[imat].materialCount + 5);
+        for (int ijk = 0; ijk < CMDLMap[AssetID].materialSets[imat].materialCount; ijk++)
         {
-
-            memcpy(&(CMDLMap[AssetID].materialSets[imat].textureCount), &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].materialSets[imat].textureCount));
-            CMDLMap[AssetID].materialSets[imat].textureCount = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].textureCount);
-            std::cout << "textures: " << CMDLMap[AssetID].materialSets[imat].textureCount << std::endl;
-            CMDLMap[AssetID].materialSets[imat].textureFileIDs.resize(CMDLMap[AssetID].materialSets[imat].textureCount);
-            memcpy(CMDLMap[AssetID].materialSets[imat].textureFileIDs.data(), &rawFile[subGetLoc + sizeof(CMDLMap[AssetID].materialSets[imat].textureCount)], sizeof(CMDLMap[AssetID].materialSets[imat].textureFileIDs.data()) * CMDLMap[AssetID].materialSets[imat].textureFileIDs.size());
-            for (int tx = 0; tx < CMDLMap[AssetID].materialSets[imat].textureCount; tx++) {
-                //memcpy(&(CMDLMap[AssetID].materialSets[imat].textureFileIDs[tx]), &rawFile[subGetLoc + sizeof(CMDLMap[AssetID].materialSets[imat].textureCount) + tx * sizeof(uint32_t)], sizeof(uint32_t));
-                CMDLMap[AssetID].materialSets[imat].textureFileIDs[tx] = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].textureFileIDs[tx]);
-                std::cout << "texture used: " << std::hex << CMDLMap[AssetID].materialSets[imat].textureFileIDs[tx] << std::dec << std::endl;
+            uint32_t flags;
+            reader.readInt32(&flags);
+            std::cout << "offset: " << std::hex << subGetLoc << std::dec << std::endl;
+            std::cout << "material properties:" << std::endl;
+            std::cout << "\tUnused, always set:                                " << ((flags & 0x01) > 0 ? "on" : "off") << std::endl;
+            std::cout << "\tUnused, always set:                                " << ((flags & 0x02) > 0 ? "on" : "off") << std::endl;
+            std::cout << "\tUnused, never set:                                 " << ((flags & 0x04) > 0 ? "on" : "off") << std::endl;
+            std::cout << "\tHas Konst values:                                  " << ((flags & 0x08) > 0 ? "on" : "off") << std::endl;
+            std::cout << "\tIs transparent:                                    " << ((flags & 0x10) > 0 ? "on" : "off") << std::endl;
+            std::cout << "\tMasked alpha:                                      " << ((flags & 0x20) > 0 ? "on" : "off") << std::endl;
+            std::cout << "\tEnable Samus's reflection:                         " << ((flags & 0x40) > 0 ? "on" : "off") << std::endl;
+            std::cout << "\tEnable Z-writes:                                   " << ((flags & 0x80) > 0 ? "on" : "off") << std::endl;
+            std::cout << "\tEnable Samus's reflection, using the eye position: " << ((flags & 0x100) > 0 ? "on" : "off") << std::endl;
+            std::cout << "\tShadow occluder mesh:                              " << ((flags & 0x200) > 0 ? "on" : "off") << std::endl;
+            std::cout << "\tEnable indirect texture stage for reflections:     " << ((flags & 0x400) > 0 ? "on" : "off") << std::endl;
+            std::cout << "\tIndicates a lightmap is present:                   " << ((flags & 0x800) > 0 ? "on" : "off") << std::endl;
+            std::cout << "\tUnused, always set:                                " << ((flags & 0x1000) > 0 ? "on" : "off") << std::endl;
+            std::cout << "\tEnable first UV coordinate to use short array:     " << ((flags & 0x2000) > 0 ? "on" : "off") << std::endl;
+            std::cout << "\tunused, never set:                                 " << ((flags & 0x4000) > 0 ? "on" : "off") << std::endl;
+            std::cout << "\tunused, never set:                                 " << ((flags & 0x8000) > 0 ? "on" : "off") << std::endl;
+            subGetLoc += sizeof(flags);
+            uint32_t TC;
+            reader.readInt32(&TC);
+            std::cout << "Texture Count: " << TC << std::endl;
+            subGetLoc += sizeof(TC);
+            while (TC > 100) {}//safety to prevent crahes
+            CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices.resize(TC);
+            std::cout << "textures:" << std::endl;
+            for (int tx = 0; tx < TC; tx++) {
+                reader.readInt32(&CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx]);
+                std::cout << "\ttexture: " << std::hex << CMDLMap[AssetID].materialSets[imat].textureFileIDs[CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx]] << std::dec << std::endl;
+                subGetLoc += sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx]);
             }
 
 
-            memcpy(&(CMDLMap[AssetID].materialSets[imat].materialCount), &rawFile[subGetLoc + sizeof(CMDLMap[AssetID].materialSets[imat].textureCount) + CMDLMap[AssetID].materialSets[imat].textureCount * sizeof(uint32_t)], sizeof(CMDLMap[AssetID].materialSets[imat].materialCount));
-            CMDLMap[AssetID].materialSets[imat].materialCount = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].materialCount);
-            std::cout << CMDLMap[AssetID].materialSets[imat].materialCount << std::endl;
-            CMDLMap[AssetID].materialSets[imat].materialEndOffsets.resize(CMDLMap[AssetID].materialSets[imat].materialCount);
-            for (int mc = 0; mc < CMDLMap[AssetID].materialSets[imat].materialCount; mc++) {
-                memcpy(&(CMDLMap[AssetID].materialSets[imat].materialEndOffsets[mc]), &rawFile[subGetLoc + sizeof(CMDLMap[AssetID].materialSets[imat].textureCount) + CMDLMap[AssetID].materialSets[imat].textureCount * sizeof(uint32_t) + sizeof(CMDLMap[AssetID].materialSets[imat].materialCount) + mc * sizeof(uint32_t)], sizeof(uint32_t));
-                CMDLMap[AssetID].materialSets[imat].materialEndOffsets[mc] = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].materialEndOffsets[mc]);
-                std::cout << "material end offset: " << std::hex << CMDLMap[AssetID].materialSets[imat].materialEndOffsets[mc] << std::dec << std::endl;
-            }
-            subGetLoc = subGetLoc + sizeof(CMDLMap[AssetID].materialSets[imat].textureCount) + CMDLMap[AssetID].materialSets[imat].textureCount * sizeof(uint32_t) + sizeof(CMDLMap[AssetID].materialSets[imat].materialCount) + CMDLMap[AssetID].materialSets[imat].materialCount * sizeof(uint32_t);
-
-            uint32_t materialStartingMarker = subGetLoc;
-
-            CMDLMap[AssetID].materialSets[imat].materials.resize(CMDLMap[AssetID].materialSets[imat].materialCount + 5);
-            for (int ijk = 0; ijk < CMDLMap[AssetID].materialSets[imat].materialCount; ijk++)
+            reader.readInt32(&CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags);
+            std::cout << "vertex atributes: " << std::endl;
+            std::cout << "\tPosition: " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x000003) > 0 ? "1" : "0") << std::endl;
+            std::cout << "\tNormal:   " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x00000C) > 0 ? "1" : "0") << std::endl;
+            std::cout << "\tColor 0:  " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x000030) > 0 ? "1" : "0") << std::endl;
+            std::cout << "\tColor 1:  " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x0000C0) > 0 ? "1" : "0") << std::endl;
+            std::cout << "\tTex 0:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x000300) > 0 ? "1" : "0") << std::endl;
+            std::cout << "\tTex 1:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x000C00) > 0 ? "1" : "0") << std::endl;
+            std::cout << "\tTex 2:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x003000) > 0 ? "1" : "0") << std::endl;
+            std::cout << "\tTex 3:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x00C000) > 0 ? "1" : "0") << std::endl;
+            std::cout << "\tTex 4:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x030000) > 0 ? "1" : "0") << std::endl;
+            std::cout << "\tTex 5:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x0C0000) > 0 ? "1" : "0") << std::endl;
+            std::cout << "\tTex 6:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x300000) > 0 ? "1" : "0") << std::endl;
+            subGetLoc += sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags);
+            uint32_t groupIndex;
+            reader.readInt32(&groupIndex);
+            std::cout << "group index: " << groupIndex << std::endl;
+            subGetLoc += sizeof(groupIndex);
+            if ((flags & 0x08) > 0)
             {
-                uint32_t flags;
-                memcpy(&flags, &rawFile[subGetLoc], sizeof(flags));
-                flags = swap_endian<uint32_t>(flags);
-                std::cout << "offset: " << std::hex << subGetLoc << std::dec << std::endl;
-                std::cout << "material properties:" << std::endl;
-                std::cout << "\tUnused, always set:                                " << ((flags & 0x01) > 0 ? "on" : "off") << std::endl;
-                std::cout << "\tUnused, always set:                                " << ((flags & 0x02) > 0 ? "on" : "off") << std::endl;
-                std::cout << "\tUnused, never set:                                 " << ((flags & 0x04) > 0 ? "on" : "off") << std::endl;
-                std::cout << "\tHas Konst values:                                  " << ((flags & 0x08) > 0 ? "on" : "off") << std::endl;
-                std::cout << "\tIs transparent:                                    " << ((flags & 0x10) > 0 ? "on" : "off") << std::endl;
-                std::cout << "\tMasked alpha:                                      " << ((flags & 0x20) > 0 ? "on" : "off") << std::endl;
-                std::cout << "\tEnable Samus's reflection:                         " << ((flags & 0x40) > 0 ? "on" : "off") << std::endl;
-                std::cout << "\tEnable Z-writes:                                   " << ((flags & 0x80) > 0 ? "on" : "off") << std::endl;
-                std::cout << "\tEnable Samus's reflection, using the eye position: " << ((flags & 0x100) > 0 ? "on" : "off") << std::endl;
-                std::cout << "\tShadow occluder mesh:                              " << ((flags & 0x200) > 0 ? "on" : "off") << std::endl;
-                std::cout << "\tEnable indirect texture stage for reflections:     " << ((flags & 0x400) > 0 ? "on" : "off") << std::endl;
-                std::cout << "\tIndicates a lightmap is present:                   " << ((flags & 0x800) > 0 ? "on" : "off") << std::endl;
-                std::cout << "\tUnused, always set:                                " << ((flags & 0x1000) > 0 ? "on" : "off") << std::endl;
-                std::cout << "\tEnable first UV coordinate to use short array:     " << ((flags & 0x2000) > 0 ? "on" : "off") << std::endl;
-                std::cout << "\tunused, never set:                                 " << ((flags & 0x4000) > 0 ? "on" : "off") << std::endl;
-                std::cout << "\tunused, never set:                                 " << ((flags & 0x8000) > 0 ? "on" : "off") << std::endl;
-                subGetLoc += sizeof(flags);
-                int32_t TC;
-                memcpy(&TC, &rawFile[subGetLoc], sizeof(TC));
-                TC = swap_endian<int32_t>(TC);
-                std::cout << "Texture Count: " << TC << std::endl;
-                subGetLoc += sizeof(TC);
-                while (TC > 100) {}
-                CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices.resize(TC);
-                std::cout << "textures:" << std::endl;
-                for (int tx = 0; tx < TC; tx++) {
-                    memcpy(&(CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx]), &rawFile[subGetLoc + tx*sizeof(PrimeAssetID)], sizeof(PrimeAssetID));
-                    CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx] = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx]);
-                    //std::cout << CMDLMap[AssetID].materialSets[imat].textureFileIndices[tx] << std::endl;
-                    std::cout << "\ttexture: " << std::hex << CMDLMap[AssetID].materialSets[imat].textureFileIDs[CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx]] << std::dec << std::endl;
+                uint32_t KonstCount;
+                reader.readInt32(&KonstCount);
+                std::cout << "KonstCount: " << KonstCount << std::endl;
+                CMDLMap[AssetID].materialSets[imat].materials[ijk].konstColors.resize(KonstCount);
+                subGetLoc += sizeof(KonstCount);
+
+                for (int mc = 0; mc < KonstCount; mc++) {
+                    reader.readInt32(&CMDLMap[AssetID].materialSets[imat].materials[ijk].konstColors[mc]);
+                    std::cout << "konst color " << mc << ": " << std::hex << CMDLMap[AssetID].materialSets[imat].materials[ijk].konstColors[mc] << std::dec << std::endl;
+
+                    subGetLoc += sizeof(uint32_t);
                 }
-
-                subGetLoc += TC * sizeof(uint32_t);
-
-                //uint32_t vertexAtributeFlags;
-                memcpy(&CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags));
-                CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags);
-                std::cout << "vertex atributes: " << std::endl;
-                std::cout << std::hex << CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags << std::dec << std::endl;
-                std::cout << "\tPosition: " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x000003) > 0 ? "1" : "0") << std::endl;
-                std::cout << "\tNormal:   " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x00000C) > 0 ? "1" : "0") << std::endl;
-                std::cout << "\tColor 0:  " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x000030) > 0 ? "1" : "0") << std::endl;
-                std::cout << "\tColor 1:  " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x0000C0) > 0 ? "1" : "0") << std::endl;
-                std::cout << "\tTex 0:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x000300) > 0 ? "1" : "0") << std::endl;
-                std::cout << "\tTex 1:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x000C00) > 0 ? "1" : "0") << std::endl;
-                std::cout << "\tTex 2:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x003000) > 0 ? "1" : "0") << std::endl;
-                std::cout << "\tTex 3:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x00C000) > 0 ? "1" : "0") << std::endl;
-                std::cout << "\tTex 4:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x030000) > 0 ? "1" : "0") << std::endl;
-                std::cout << "\tTex 5:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x0C0000) > 0 ? "1" : "0") << std::endl;
-                std::cout << "\tTex 6:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x300000) > 0 ? "1" : "0") << std::endl;
-                subGetLoc += sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags);
-                uint32_t groupIndex;
-                memcpy(&groupIndex, &rawFile[subGetLoc], sizeof(groupIndex));
-                groupIndex = swap_endian<uint32_t>(groupIndex);
-                std::cout << "group index: " << groupIndex << std::endl;
-                subGetLoc += sizeof(groupIndex);
-                if ((flags & 0x08) > 0)
-                {
-                    uint32_t KonstCount;
-                    memcpy(&KonstCount, &rawFile[subGetLoc], sizeof(KonstCount));
-                    KonstCount = swap_endian<uint32_t>(KonstCount);
-                    std::cout << KonstCount << std::endl;
-                    CMDLMap[AssetID].materialSets[imat].materials[ijk].konstColors.resize(KonstCount);
-                    for (int mc = 0; mc < KonstCount; mc++) {
-                        memcpy(&(CMDLMap[AssetID].materialSets[imat].materials[ijk].konstColors[mc]), &rawFile[subGetLoc + sizeof(KonstCount) + mc * sizeof(uint32_t)], sizeof(uint32_t));
-                        CMDLMap[AssetID].materialSets[imat].materials[ijk].konstColors[mc] = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].materials[ijk].konstColors[mc]);
-                        std::cout << "konst color " << mc << ": " << std::hex << CMDLMap[AssetID].materialSets[imat].materials[ijk].konstColors[mc] << std::dec << std::endl;
-                    }
-                    subGetLoc += sizeof(KonstCount) + KonstCount * sizeof(uint32_t);
-                }
-                short blendDestFactor;
-                memcpy(&blendDestFactor, &rawFile[subGetLoc], sizeof(blendDestFactor));
-                blendDestFactor = swap_endian<short>(blendDestFactor);
-                std::cout << "blendDestFactor: " << blendDestFactor << std::endl;
-                subGetLoc += sizeof(blendDestFactor);
-
-                short blendSourceFactor;
-                memcpy(&blendSourceFactor, &rawFile[subGetLoc], sizeof(blendSourceFactor));
-                blendSourceFactor = swap_endian<short>(blendSourceFactor);
-                std::cout << "blendSourceFactor: " << blendSourceFactor << std::endl;
-                subGetLoc += sizeof(blendSourceFactor);
-
-                if ((flags & 0x400) != 0)
-                {
-                    uint32_t reflectionIndirectTextureIndex;
-                    memcpy(&reflectionIndirectTextureIndex, &rawFile[subGetLoc], sizeof(reflectionIndirectTextureIndex));
-                    reflectionIndirectTextureIndex = swap_endian<uint32_t>(reflectionIndirectTextureIndex);
-                    std::cout << "reflection Indirect Texture Index: " << reflectionIndirectTextureIndex << std::endl;
-                    subGetLoc += sizeof(reflectionIndirectTextureIndex);
-                }
-
-
-                memcpy(&(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount), &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount));
-                CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount);
-                std::cout << "color channel count: " << CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount << std::endl;
-                subGetLoc += sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount);
-
-                memcpy(&(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags), &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags));
-                CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags = swap_endian<uint32_t>(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags);
-                std::cout << "color channel flags: " << CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags << std::dec << std::endl;
-
-                subGetLoc += CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount * 4;
-
-
-                uint32_t TEVStageCount;
-                memcpy(&TEVStageCount, &rawFile[subGetLoc], sizeof(TEVStageCount));
-                TEVStageCount = swap_endian<uint32_t>(TEVStageCount);
-                std::cout << "TEV Stage Count: " << TEVStageCount << std::endl;
-                subGetLoc += sizeof(TEVStageCount);
-
-                for (int ijk = 0; ijk < TEVStageCount; ijk++)
-                {
-                    std::cout << std::hex << "[" << subGetLoc << "] TEV stage " << std::dec << ijk << ": " << std::endl;
-                    uint32_t colorInputFlags;
-                    memcpy(&colorInputFlags, &rawFile[subGetLoc], sizeof(colorInputFlags));
-                    colorInputFlags = swap_endian<uint32_t>(colorInputFlags);
-                    std::cout << "\tColor input flags (color0): ";
-                         if ((colorInputFlags & 0x1f) == 0x0) std::cout << "Previous stage RGB"<<std::endl;
-                    else if ((colorInputFlags & 0x1f) == 0x1) std::cout << "Previous stage AAA"<<std::endl;
-                    else if ((colorInputFlags & 0x1f) == 0x2) std::cout << "Color 0 RGB"<<std::endl;
-                    else if ((colorInputFlags & 0x1f) == 0x3) std::cout << "Color 0 AAA"<<std::endl;
-                    else if ((colorInputFlags & 0x1f) == 0x4) std::cout << "Color 1 RGB"<<std::endl;
-                    else if ((colorInputFlags & 0x1f) == 0x5) std::cout << "Color 1 AAA"<<std::endl;
-                    else if ((colorInputFlags & 0x1f) == 0x6) std::cout << "Color 2 RGB"<<std::endl;
-                    else if ((colorInputFlags & 0x1f) == 0x7) std::cout << "Color 2 AAA"<<std::endl;
-                    else if ((colorInputFlags & 0x1f) == 0x8) std::cout << "Texture RGB"<<std::endl;
-                    else if ((colorInputFlags & 0x1f) == 0x9) std::cout << "Texture AAA"<<std::endl;
-                    else if ((colorInputFlags & 0x1f) == 0xa) std::cout << "Rasterized RGB"<<std::endl;
-                    else if ((colorInputFlags & 0x1f) == 0xb) std::cout << "Rasterized AAA"<<std::endl;
-                    else if ((colorInputFlags & 0x1f) == 0xc) std::cout << "One"<<std::endl;
-                    else if ((colorInputFlags & 0x1f) == 0xd) std::cout << "Half"<<std::endl;
-                    else if ((colorInputFlags & 0x1f) == 0xe) std::cout << "Konstant RGB"<<std::endl;
-                    else if ((colorInputFlags & 0x1f) == 0xf) std::cout << "Zero"<<std::endl;
-
-                    std::cout << "\tColor input flags (color1): ";
-                         if (((colorInputFlags & 0x3E0) >> 5) == 0x0) std::cout << "Previous stage RGB" << std::endl;
-                    else if (((colorInputFlags & 0x3E0) >> 5) == 0x1) std::cout << "Previous stage AAA" << std::endl;
-                    else if (((colorInputFlags & 0x3E0) >> 5) == 0x2) std::cout << "Color 0 RGB" << std::endl;
-                    else if (((colorInputFlags & 0x3E0) >> 5) == 0x3) std::cout << "Color 0 AAA" << std::endl;
-                    else if (((colorInputFlags & 0x3E0) >> 5) == 0x4) std::cout << "Color 1 RGB" << std::endl;
-                    else if (((colorInputFlags & 0x3E0) >> 5) == 0x5) std::cout << "Color 1 AAA" << std::endl;
-                    else if (((colorInputFlags & 0x3E0) >> 5) == 0x6) std::cout << "Color 2 RGB" << std::endl;
-                    else if (((colorInputFlags & 0x3E0) >> 5) == 0x7) std::cout << "Color 2 AAA" << std::endl;
-                    else if (((colorInputFlags & 0x3E0) >> 5) == 0x8) std::cout << "Texture RGB" << std::endl;
-                    else if (((colorInputFlags & 0x3E0) >> 5) == 0x9) std::cout << "Texture AAA" << std::endl;
-                    else if (((colorInputFlags & 0x3E0) >> 5) == 0xa) std::cout << "Rasterized RGB" << std::endl;
-                    else if (((colorInputFlags & 0x3E0) >> 5) == 0xb) std::cout << "Rasterized AAA" << std::endl;
-                    else if (((colorInputFlags & 0x3E0) >> 5) == 0xc) std::cout << "One" << std::endl;
-                    else if (((colorInputFlags & 0x3E0) >> 5) == 0xd) std::cout << "Half" << std::endl;
-                    else if (((colorInputFlags & 0x3E0) >> 5) == 0xe) std::cout << "Konstant RGB" << std::endl;
-                    else if (((colorInputFlags & 0x3E0) >> 5) == 0xf) std::cout << "Zero" << std::endl;
-
-                    std::cout << "\tColor input flags (color2): ";
-                         if (((colorInputFlags & 0x7C00) >> 10) == 0x0) std::cout << "Previous stage RGB" << std::endl;
-                    else if (((colorInputFlags & 0x7C00) >> 10) == 0x1) std::cout << "Previous stage AAA" << std::endl;
-                    else if (((colorInputFlags & 0x7C00) >> 10) == 0x2) std::cout << "Color 0 RGB" << std::endl;
-                    else if (((colorInputFlags & 0x7C00) >> 10) == 0x3) std::cout << "Color 0 AAA" << std::endl;
-                    else if (((colorInputFlags & 0x7C00) >> 10) == 0x4) std::cout << "Color 1 RGB" << std::endl;
-                    else if (((colorInputFlags & 0x7C00) >> 10) == 0x5) std::cout << "Color 1 AAA" << std::endl;
-                    else if (((colorInputFlags & 0x7C00) >> 10) == 0x6) std::cout << "Color 2 RGB" << std::endl;
-                    else if (((colorInputFlags & 0x7C00) >> 10) == 0x7) std::cout << "Color 2 AAA" << std::endl;
-                    else if (((colorInputFlags & 0x7C00) >> 10) == 0x8) std::cout << "Texture RGB" << std::endl;
-                    else if (((colorInputFlags & 0x7C00) >> 10) == 0x9) std::cout << "Texture AAA" << std::endl;
-                    else if (((colorInputFlags & 0x7C00) >> 10) == 0xa) std::cout << "Rasterized RGB" << std::endl;
-                    else if (((colorInputFlags & 0x7C00) >> 10) == 0xb) std::cout << "Rasterized AAA" << std::endl;
-                    else if (((colorInputFlags & 0x7C00) >> 10) == 0xc) std::cout << "One" << std::endl;
-                    else if (((colorInputFlags & 0x7C00) >> 10) == 0xd) std::cout << "Half" << std::endl;
-                    else if (((colorInputFlags & 0x7C00) >> 10) == 0xe) std::cout << "Konstant RGB" << std::endl;
-                    else if (((colorInputFlags & 0x7C00) >> 10) == 0xf) std::cout << "Zero" << std::endl;
-                    
-                    std::cout << "\tColor input flags (color3): ";
-                         if (((colorInputFlags & 0xF8000) >> 15) == 0x0) std::cout << "Previous stage RGB" << std::endl;
-                    else if (((colorInputFlags & 0xF8000) >> 15) == 0x1) std::cout << "Previous stage AAA" << std::endl;
-                    else if (((colorInputFlags & 0xF8000) >> 15) == 0x2) std::cout << "Color 0 RGB" << std::endl;
-                    else if (((colorInputFlags & 0xF8000) >> 15) == 0x3) std::cout << "Color 0 AAA" << std::endl;
-                    else if (((colorInputFlags & 0xF8000) >> 15) == 0x4) std::cout << "Color 1 RGB" << std::endl;
-                    else if (((colorInputFlags & 0xF8000) >> 15) == 0x5) std::cout << "Color 1 AAA" << std::endl;
-                    else if (((colorInputFlags & 0xF8000) >> 15) == 0x6) std::cout << "Color 2 RGB" << std::endl;
-                    else if (((colorInputFlags & 0xF8000) >> 15) == 0x7) std::cout << "Color 2 AAA" << std::endl;
-                    else if (((colorInputFlags & 0xF8000) >> 15) == 0x8) std::cout << "Texture RGB" << std::endl;
-                    else if (((colorInputFlags & 0xF8000) >> 15) == 0x9) std::cout << "Texture AAA" << std::endl;
-                    else if (((colorInputFlags & 0xF8000) >> 15) == 0xa) std::cout << "Rasterized RGB" << std::endl;
-                    else if (((colorInputFlags & 0xF8000) >> 15) == 0xb) std::cout << "Rasterized AAA" << std::endl;
-                    else if (((colorInputFlags & 0xF8000) >> 15) == 0xc) std::cout << "One" << std::endl;
-                    else if (((colorInputFlags & 0xF8000) >> 15) == 0xd) std::cout << "Half" << std::endl;
-                    else if (((colorInputFlags & 0xF8000) >> 15) == 0xe) std::cout << "Konstant RGB" << std::endl;
-                    else if (((colorInputFlags & 0xF8000) >> 15) == 0xf) std::cout << "Zero" << std::endl;
-
-
-                    subGetLoc += sizeof(colorInputFlags);
-                    
-                    uint32_t alphaInputFlags;
-                    memcpy(&alphaInputFlags, &rawFile[subGetLoc], sizeof(alphaInputFlags));
-                    alphaInputFlags = swap_endian<uint32_t>(alphaInputFlags);
-                    std::cout << "\tAlpha input flags (color0): ";
-                         if ((alphaInputFlags & 0x1f) == 0x0) std::cout << "Previous stage alpha" << std::endl;
-                    else if ((alphaInputFlags & 0x1f) == 0x1) std::cout << "Color 0 alpha" << std::endl;
-                    else if ((alphaInputFlags & 0x1f) == 0x2) std::cout << "Color 1 alpha" << std::endl;
-                    else if ((alphaInputFlags & 0x1f) == 0x3) std::cout << "Color 2 alpha" << std::endl;
-                    else if ((alphaInputFlags & 0x1f) == 0x4) std::cout << "Texture alpha" << std::endl;
-                    else if ((alphaInputFlags & 0x1f) == 0x5) std::cout << "Rasterized alpha" << std::endl;
-                    else if ((alphaInputFlags & 0x1f) == 0x6) std::cout << "Konstant alpha" << std::endl;
-                    else if ((alphaInputFlags & 0x1f) == 0x7) std::cout << "Zero" << std::endl;
-
-                    std::cout << "\tAlpha input flags (color1): ";
-                         if (((alphaInputFlags & 0x3E0) >> 5) == 0x0) std::cout << "Previous stage alpha" << std::endl;
-                    else if (((alphaInputFlags & 0x3E0) >> 5) == 0x1) std::cout << "Color 0 alpha" << std::endl;
-                    else if (((alphaInputFlags & 0x3E0) >> 5) == 0x2) std::cout << "Color 1 alpha" << std::endl;
-                    else if (((alphaInputFlags & 0x3E0) >> 5) == 0x3) std::cout << "Color 2 alpha" << std::endl;
-                    else if (((alphaInputFlags & 0x3E0) >> 5) == 0x4) std::cout << "Texture alpha" << std::endl;
-                    else if (((alphaInputFlags & 0x3E0) >> 5) == 0x5) std::cout << "Rasterized alpha" << std::endl;
-                    else if (((alphaInputFlags & 0x3E0) >> 5) == 0x6) std::cout << "Konstant alpha" << std::endl;
-                    else if (((alphaInputFlags & 0x3E0) >> 5) == 0x7) std::cout << "Zero" << std::endl;
-
-                    std::cout << "\tAlpha input flags (color2): ";
-                         if (((alphaInputFlags & 0x7C00) >> 10) == 0x0) std::cout << "Previous stage alpha" << std::endl;
-                    else if (((alphaInputFlags & 0x7C00) >> 10) == 0x1) std::cout << "Color 0 alpha" << std::endl;
-                    else if (((alphaInputFlags & 0x7C00) >> 10) == 0x2) std::cout << "Color 1 alpha" << std::endl;
-                    else if (((alphaInputFlags & 0x7C00) >> 10) == 0x3) std::cout << "Color 2 alpha" << std::endl;
-                    else if (((alphaInputFlags & 0x7C00) >> 10) == 0x4) std::cout << "Texture alpha" << std::endl;
-                    else if (((alphaInputFlags & 0x7C00) >> 10) == 0x5) std::cout << "Rasterized alpha" << std::endl;
-                    else if (((alphaInputFlags & 0x7C00) >> 10) == 0x6) std::cout << "Konstant alpha" << std::endl;
-                    else if (((alphaInputFlags & 0x7C00) >> 10) == 0x7) std::cout << "Zero" << std::endl;
-
-                    std::cout << "\tAlpha input flags (color3): ";
-                         if (((alphaInputFlags & 0xF8000) >> 15) == 0x0) std::cout << "Previous stage alpha" << std::endl;
-                    else if (((alphaInputFlags & 0xF8000) >> 15) == 0x1) std::cout << "Color 0 alpha" << std::endl;
-                    else if (((alphaInputFlags & 0xF8000) >> 15) == 0x2) std::cout << "Color 1 alpha" << std::endl;
-                    else if (((alphaInputFlags & 0xF8000) >> 15) == 0x3) std::cout << "Color 2 alpha" << std::endl;
-                    else if (((alphaInputFlags & 0xF8000) >> 15) == 0x4) std::cout << "Texture alpha" << std::endl;
-                    else if (((alphaInputFlags & 0xF8000) >> 15) == 0x5) std::cout << "Rasterized alpha" << std::endl;
-                    else if (((alphaInputFlags & 0xF8000) >> 15) == 0x6) std::cout << "Konstant alpha" << std::endl;
-                    else if (((alphaInputFlags & 0xF8000) >> 15) == 0x7) std::cout << "Zero" << std::endl;
-                    subGetLoc += sizeof(alphaInputFlags);
-
-                    uint32_t colorCombineFlags;
-                    memcpy(&colorCombineFlags, &rawFile[subGetLoc], sizeof(colorCombineFlags));
-                    colorCombineFlags = swap_endian<uint32_t>(colorCombineFlags);
-                    std::cout << "\tcolor combine flags: " << std::endl;
-                    std::cout << "\tCombiner operator:   " << ((colorCombineFlags & 0x0000000F) >> 0) << std::endl;
-                    std::cout << "\tBias:                " << ((colorCombineFlags & 0x00000030) >> 4) << std::endl;
-                    std::cout << "\tScale:               " << ((colorCombineFlags & 0x000000C0) >> 6) << std::endl;
-                    std::cout << "\tClamp flag:          " << ((colorCombineFlags & 0x00000100) >> 8) << std::endl;
-                    std::cout << "\tOutput register:     " << ((colorCombineFlags & 0x00000600) >> 9) << std::endl;
-                    std::cout << "\tUnused:              " << ((colorCombineFlags & 0xFFFFF800) >> 11) << std::endl;
-                    subGetLoc += sizeof(colorCombineFlags);
-
-                    uint32_t alphaCombineFlags;
-                    memcpy(&alphaCombineFlags, &rawFile[subGetLoc], sizeof(alphaCombineFlags));
-                    alphaCombineFlags = swap_endian<uint32_t>(alphaCombineFlags);
-                    std::cout << "\talpha combine flags: " << std::endl;
-                    std::cout << "\tCombiner operator:   " << ((alphaCombineFlags & 0x0000000F) >> 0) << std::endl;
-                    std::cout << "\tBias:                " << ((alphaCombineFlags & 0x00000030) >> 4) << std::endl;
-                    std::cout << "\tScale:               " << ((alphaCombineFlags & 0x000000C0) >> 6) << std::endl;
-                    std::cout << "\tClamp flag:          " << ((alphaCombineFlags & 0x00000100) >> 8) << std::endl;
-                    std::cout << "\tOutput register:     " << ((alphaCombineFlags & 0x00000600) >> 9) << std::endl;
-                    std::cout << "\tUnused:              " << ((alphaCombineFlags & 0xFFFFF800) >> 11) << std::endl;
-                    subGetLoc += sizeof(alphaCombineFlags);
-
-
-
-                    uint8_t padding;
-                    memcpy(&padding, &rawFile[subGetLoc], sizeof(padding));
-                    subGetLoc += sizeof(padding);
-
-                    uint8_t konstAlphaInput;
-                    memcpy(&konstAlphaInput, &rawFile[subGetLoc], sizeof(konstAlphaInput));
-                    subGetLoc += sizeof(konstAlphaInput);
-
-                    uint8_t konstColorInput;
-                    memcpy(&konstColorInput, &rawFile[subGetLoc], sizeof(konstColorInput));
-                    subGetLoc += sizeof(konstColorInput);
-
-                    uint8_t rasterizedColorInput;
-                    memcpy(&rasterizedColorInput, &rawFile[subGetLoc], sizeof(rasterizedColorInput));
-                    subGetLoc += sizeof(rasterizedColorInput);
-                }
-                for (int ijkl = 0; ijkl < TEVStageCount; ijkl++)
-                {
-                    uint16_t padding;
-                    memcpy(&padding, &rawFile[subGetLoc], sizeof(padding));
-                    subGetLoc += sizeof(padding);
-
-                    uint8_t textureTEVInput;
-                    memcpy(&textureTEVInput, &rawFile[subGetLoc], sizeof(textureTEVInput));
-                    std::cout << "texture TEV Input: " << (uint32_t)textureTEVInput << std::endl;
-                    subGetLoc += sizeof(textureTEVInput);
-
-                    uint8_t texCoordTEVInput;
-                    memcpy(&texCoordTEVInput, &rawFile[subGetLoc], sizeof(texCoordTEVInput));
-                    std::cout << "texture coord TEV Input: " << (uint32_t)texCoordTEVInput << std::endl;
-                    subGetLoc += sizeof(texCoordTEVInput);
-                }
-
-                uint32_t texGenCount;
-                memcpy(&texGenCount, &rawFile[subGetLoc], sizeof(texGenCount));
-                texGenCount = swap_endian<uint32_t>(texGenCount);
-                std::cout << "texGen Count: " << texGenCount << std::endl;
-                subGetLoc += sizeof(texGenCount);
-
-                for (int ijkl = 0; ijkl < texGenCount; ijkl++)
-                {
-                    uint32_t texGenFlag;
-                    memcpy(&texGenFlag, &rawFile[subGetLoc], sizeof(texGenFlag));
-                    texGenFlag = swap_endian<uint32_t>(texGenFlag);
-                    std::cout << "texGen flag "<<ijkl<<": " << std::endl;
-                    std::cout << "\ttexCoord gen type: ";
-                    switch (ijkl&0xF)
-                    {
-                        case GX_TG_BUMP0:   std::cout << "GX_TG_BUMP0"  << std::endl; break;
-                        case GX_TG_BUMP1:   std::cout << "GX_TG_BUMP1"  << std::endl; break;
-                        case GX_TG_BUMP2:   std::cout << "GX_TG_BUMP2"  << std::endl; break;
-                        case GX_TG_BUMP3:   std::cout << "GX_TG_BUMP3"  << std::endl; break;
-                        case GX_TG_BUMP4:   std::cout << "GX_TG_BUMP4"  << std::endl; break;
-                        case GX_TG_BUMP5:   std::cout << "GX_TG_BUMP5"  << std::endl; break;
-                        case GX_TG_BUMP6:   std::cout << "GX_TG_BUMP6"  << std::endl; break;
-                        case GX_TG_BUMP7:   std::cout << "GX_TG_BUMP7"  << std::endl; break;
-                        case GX_TG_MTX2x4:  std::cout << "GX_TG_MTX2x4" << std::endl; break;
-                        case GX_TG_MTX3x4:  std::cout << "GX_TG_MTX3x4" << std::endl; break;
-                        case GX_TG_SRTG:    std::cout << "GX_TG_SRTG"   << std::endl; break;
-                    }
-                    std::cout << "\ttexCoord src: ";
-                    switch ((ijkl & 0x1F0) >> 4)
-                    {
-                        case GX_TG_BINRM    : std::cout << "GX_TG_BINRM     " << std::endl;break;
-                        case GX_TG_COLOR0   : std::cout << "GX_TG_COLOR0    " << std::endl;break;
-                        case GX_TG_COLOR1   : std::cout << "GX_TG_COLOR1    " << std::endl;break;
-                        case GX_TG_NRM      : std::cout << "GX_TG_NRM       " << std::endl;break;
-                        case GX_TG_POS      : std::cout << "GX_TG_POS       " << std::endl;break;
-                        case GX_TG_TANGENT  : std::cout << "GX_TG_TANGENT   " << std::endl;break;
-                        case GX_TG_TEX0     : std::cout << "GX_TG_TEX0      " << std::endl;break;
-                        case GX_TG_TEX1     : std::cout << "GX_TG_TEX1      " << std::endl;break;
-                        case GX_TG_TEX2     : std::cout << "GX_TG_TEX2      " << std::endl;break;
-                        case GX_TG_TEX3     : std::cout << "GX_TG_TEX3      " << std::endl;break;
-                        case GX_TG_TEX4     : std::cout << "GX_TG_TEX4      " << std::endl;break;
-                        case GX_TG_TEX5     : std::cout << "GX_TG_TEX5      " << std::endl;break;
-                        case GX_TG_TEX6     : std::cout << "GX_TG_TEX6      " << std::endl;break;
-                        case GX_TG_TEX7     : std::cout << "GX_TG_TEX7      " << std::endl;break;
-                        case GX_TG_TEXCOORD0: std::cout << "GX_TG_TEXCOORD0 " << std::endl;break;
-                        case GX_TG_TEXCOORD1: std::cout << "GX_TG_TEXCOORD1 " << std::endl;break;
-                        case GX_TG_TEXCOORD2: std::cout << "GX_TG_TEXCOORD2 " << std::endl;break;
-                        case GX_TG_TEXCOORD3: std::cout << "GX_TG_TEXCOORD3 " << std::endl;break;
-                        case GX_TG_TEXCOORD4: std::cout << "GX_TG_TEXCOORD4 " << std::endl;break;
-                        case GX_TG_TEXCOORD5: std::cout << "GX_TG_TEXCOORD5 " << std::endl;break;
-                        case GX_TG_TEXCOORD6: std::cout << "GX_TG_TEXCOORD6 " << std::endl;break;
-                    }
-                    std::cout << "\ttex matrix index: ";
-                    switch (((ijkl & 0x3E00) >> 9) + 30)
-                    {
-                        case GX_IDENTITY: std::cout << "GX_IDENTITY" << std::endl;break;
-                        case GX_TEXMTX0 : std::cout << "GX_TEXMTX0 " << std::endl;break;
-                        case GX_TEXMTX1 : std::cout << "GX_TEXMTX1 " << std::endl;break;
-                        case GX_TEXMTX2 : std::cout << "GX_TEXMTX2 " << std::endl;break;
-                        case GX_TEXMTX3 : std::cout << "GX_TEXMTX3 " << std::endl;break;
-                        case GX_TEXMTX4 : std::cout << "GX_TEXMTX4 " << std::endl;break;
-                        case GX_TEXMTX5 : std::cout << "GX_TEXMTX5 " << std::endl;break;
-                        case GX_TEXMTX6 : std::cout << "GX_TEXMTX6 " << std::endl;break;
-                        case GX_TEXMTX7 : std::cout << "GX_TEXMTX7 " << std::endl;break;
-                        case GX_TEXMTX8 : std::cout << "GX_TEXMTX8 " << std::endl;break;
-                        case GX_TEXMTX9 : std::cout << "GX_TEXMTX9 " << std::endl;break;
-                    }
-                    std::cout << "\tnormalize flag: " << ((ijkl&0x4000)>0?"on":"off") << std::endl;
-                    std::cout << "\tpost transform tex matrix index: ";
-                    switch (((ijkl & 0x1F8000) >> 15)+64)
-                    {
-                        case GX_DTTIDENTITY: std::cout << "GX_DTTIDENTITY" << std::endl;break;
-                        case GX_DTTMTX0    : std::cout << "GX_DTTMTX0    " << std::endl;break;
-                        case GX_DTTMTX1    : std::cout << "GX_DTTMTX1    " << std::endl;break;
-                        case GX_DTTMTX10   : std::cout << "GX_DTTMTX10   " << std::endl;break;
-                        case GX_DTTMTX11   : std::cout << "GX_DTTMTX11   " << std::endl;break;
-                        case GX_DTTMTX12   : std::cout << "GX_DTTMTX12   " << std::endl;break;
-                        case GX_DTTMTX13   : std::cout << "GX_DTTMTX13   " << std::endl;break;
-                        case GX_DTTMTX14   : std::cout << "GX_DTTMTX14   " << std::endl;break;
-                        case GX_DTTMTX15   : std::cout << "GX_DTTMTX15   " << std::endl;break;
-                        case GX_DTTMTX16   : std::cout << "GX_DTTMTX16   " << std::endl;break;
-                        case GX_DTTMTX17   : std::cout << "GX_DTTMTX17   " << std::endl;break;
-                        case GX_DTTMTX18   : std::cout << "GX_DTTMTX18   " << std::endl;break;
-                        case GX_DTTMTX19   : std::cout << "GX_DTTMTX19   " << std::endl;break;
-                        case GX_DTTMTX2    : std::cout << "GX_DTTMTX2    " << std::endl;break;
-                        case GX_DTTMTX3    : std::cout << "GX_DTTMTX3    " << std::endl;break;
-                        case GX_DTTMTX4    : std::cout << "GX_DTTMTX4    " << std::endl;break;
-                        case GX_DTTMTX5    : std::cout << "GX_DTTMTX5    " << std::endl;break;
-                        case GX_DTTMTX6    : std::cout << "GX_DTTMTX6    " << std::endl;break;
-                        case GX_DTTMTX7    : std::cout << "GX_DTTMTX7    " << std::endl;break;
-                        case GX_DTTMTX8    : std::cout << "GX_DTTMTX8    " << std::endl;break;
-                        case GX_DTTMTX9    : std::cout << "GX_DTTMTX9    " << std::endl;break;
-                    }
-                    subGetLoc += sizeof(texGenCount);
-                }
-
-                subGetLoc = materialStartingMarker + CMDLMap[AssetID].materialSets[imat].materialEndOffsets[ijk];
-
             }
-            upperGetLoc += CMDLMap[AssetID].dataSectionSizes[imat];
-            subGetLoc = upperGetLoc;
+
+
+
+            uint16_t blendDestFactor;
+            reader.readInt16(&blendDestFactor);
+            std::cout << "blendDestFactor: " << blendDestFactor << std::endl;
+            subGetLoc += sizeof(blendDestFactor);
+
+            uint16_t blendSourceFactor;
+            reader.readInt16(&blendSourceFactor);
+            std::cout << "blendSourceFactor: " << blendSourceFactor << std::endl;
+            subGetLoc += sizeof(blendSourceFactor);
+
+            if ((flags & 0x400) != 0)
+            {
+                uint32_t reflectionIndirectTextureIndex;
+                reader.readInt32(&reflectionIndirectTextureIndex);
+                std::cout << "reflection Indirect Texture Index: " << reflectionIndirectTextureIndex << std::endl;
+                subGetLoc += sizeof(reflectionIndirectTextureIndex);
+            }
+
+
+            reader.readInt32(&CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount);
+            std::cout << "color channel count: " << CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount << std::endl;
+            subGetLoc += sizeof(CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount);
+
+            reader.readInt32(&CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags);
+            std::cout << "color channel flags: " << CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags << std::dec << std::endl;
+
+            subGetLoc += CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount * 4;
+
+
+            uint32_t TEVStageCount;
+            reader.readInt32(&TEVStageCount);
+            std::cout << "TEV Stage Count: " << TEVStageCount << std::endl;
+            subGetLoc += sizeof(TEVStageCount);
+
+            for (int ijkl = 0; ijkl < TEVStageCount; ijkl++)
+            {
+                std::cout << std::hex << "[" << subGetLoc << "] TEV stage " << std::dec << ijkl << ": " << std::endl;
+                uint32_t colorInputFlags;
+                reader.readInt32(&colorInputFlags);
+                std::cout << "\tColor input flags (color0): ";
+                        if ((colorInputFlags & 0x1f) == 0x0) std::cout << "Previous stage RGB"<<std::endl;
+                else if ((colorInputFlags & 0x1f) == 0x1) std::cout << "Previous stage AAA"<<std::endl;
+                else if ((colorInputFlags & 0x1f) == 0x2) std::cout << "Color 0 RGB"<<std::endl;
+                else if ((colorInputFlags & 0x1f) == 0x3) std::cout << "Color 0 AAA"<<std::endl;
+                else if ((colorInputFlags & 0x1f) == 0x4) std::cout << "Color 1 RGB"<<std::endl;
+                else if ((colorInputFlags & 0x1f) == 0x5) std::cout << "Color 1 AAA"<<std::endl;
+                else if ((colorInputFlags & 0x1f) == 0x6) std::cout << "Color 2 RGB"<<std::endl;
+                else if ((colorInputFlags & 0x1f) == 0x7) std::cout << "Color 2 AAA"<<std::endl;
+                else if ((colorInputFlags & 0x1f) == 0x8) std::cout << "Texture RGB"<<std::endl;
+                else if ((colorInputFlags & 0x1f) == 0x9) std::cout << "Texture AAA"<<std::endl;
+                else if ((colorInputFlags & 0x1f) == 0xa) std::cout << "Rasterized RGB"<<std::endl;
+                else if ((colorInputFlags & 0x1f) == 0xb) std::cout << "Rasterized AAA"<<std::endl;
+                else if ((colorInputFlags & 0x1f) == 0xc) std::cout << "One"<<std::endl;
+                else if ((colorInputFlags & 0x1f) == 0xd) std::cout << "Half"<<std::endl;
+                else if ((colorInputFlags & 0x1f) == 0xe) std::cout << "Konstant RGB"<<std::endl;
+                else if ((colorInputFlags & 0x1f) == 0xf) std::cout << "Zero"<<std::endl;
+
+                std::cout << "\tColor input flags (color1): ";
+                        if (((colorInputFlags & 0x3E0) >> 5) == 0x0) std::cout << "Previous stage RGB" << std::endl;
+                else if (((colorInputFlags & 0x3E0) >> 5) == 0x1) std::cout << "Previous stage AAA" << std::endl;
+                else if (((colorInputFlags & 0x3E0) >> 5) == 0x2) std::cout << "Color 0 RGB" << std::endl;
+                else if (((colorInputFlags & 0x3E0) >> 5) == 0x3) std::cout << "Color 0 AAA" << std::endl;
+                else if (((colorInputFlags & 0x3E0) >> 5) == 0x4) std::cout << "Color 1 RGB" << std::endl;
+                else if (((colorInputFlags & 0x3E0) >> 5) == 0x5) std::cout << "Color 1 AAA" << std::endl;
+                else if (((colorInputFlags & 0x3E0) >> 5) == 0x6) std::cout << "Color 2 RGB" << std::endl;
+                else if (((colorInputFlags & 0x3E0) >> 5) == 0x7) std::cout << "Color 2 AAA" << std::endl;
+                else if (((colorInputFlags & 0x3E0) >> 5) == 0x8) std::cout << "Texture RGB" << std::endl;
+                else if (((colorInputFlags & 0x3E0) >> 5) == 0x9) std::cout << "Texture AAA" << std::endl;
+                else if (((colorInputFlags & 0x3E0) >> 5) == 0xa) std::cout << "Rasterized RGB" << std::endl;
+                else if (((colorInputFlags & 0x3E0) >> 5) == 0xb) std::cout << "Rasterized AAA" << std::endl;
+                else if (((colorInputFlags & 0x3E0) >> 5) == 0xc) std::cout << "One" << std::endl;
+                else if (((colorInputFlags & 0x3E0) >> 5) == 0xd) std::cout << "Half" << std::endl;
+                else if (((colorInputFlags & 0x3E0) >> 5) == 0xe) std::cout << "Konstant RGB" << std::endl;
+                else if (((colorInputFlags & 0x3E0) >> 5) == 0xf) std::cout << "Zero" << std::endl;
+
+                std::cout << "\tColor input flags (color2): ";
+                        if (((colorInputFlags & 0x7C00) >> 10) == 0x0) std::cout << "Previous stage RGB" << std::endl;
+                else if (((colorInputFlags & 0x7C00) >> 10) == 0x1) std::cout << "Previous stage AAA" << std::endl;
+                else if (((colorInputFlags & 0x7C00) >> 10) == 0x2) std::cout << "Color 0 RGB" << std::endl;
+                else if (((colorInputFlags & 0x7C00) >> 10) == 0x3) std::cout << "Color 0 AAA" << std::endl;
+                else if (((colorInputFlags & 0x7C00) >> 10) == 0x4) std::cout << "Color 1 RGB" << std::endl;
+                else if (((colorInputFlags & 0x7C00) >> 10) == 0x5) std::cout << "Color 1 AAA" << std::endl;
+                else if (((colorInputFlags & 0x7C00) >> 10) == 0x6) std::cout << "Color 2 RGB" << std::endl;
+                else if (((colorInputFlags & 0x7C00) >> 10) == 0x7) std::cout << "Color 2 AAA" << std::endl;
+                else if (((colorInputFlags & 0x7C00) >> 10) == 0x8) std::cout << "Texture RGB" << std::endl;
+                else if (((colorInputFlags & 0x7C00) >> 10) == 0x9) std::cout << "Texture AAA" << std::endl;
+                else if (((colorInputFlags & 0x7C00) >> 10) == 0xa) std::cout << "Rasterized RGB" << std::endl;
+                else if (((colorInputFlags & 0x7C00) >> 10) == 0xb) std::cout << "Rasterized AAA" << std::endl;
+                else if (((colorInputFlags & 0x7C00) >> 10) == 0xc) std::cout << "One" << std::endl;
+                else if (((colorInputFlags & 0x7C00) >> 10) == 0xd) std::cout << "Half" << std::endl;
+                else if (((colorInputFlags & 0x7C00) >> 10) == 0xe) std::cout << "Konstant RGB" << std::endl;
+                else if (((colorInputFlags & 0x7C00) >> 10) == 0xf) std::cout << "Zero" << std::endl;
+                    
+                std::cout << "\tColor input flags (color3): ";
+                        if (((colorInputFlags & 0xF8000) >> 15) == 0x0) std::cout << "Previous stage RGB" << std::endl;
+                else if (((colorInputFlags & 0xF8000) >> 15) == 0x1) std::cout << "Previous stage AAA" << std::endl;
+                else if (((colorInputFlags & 0xF8000) >> 15) == 0x2) std::cout << "Color 0 RGB" << std::endl;
+                else if (((colorInputFlags & 0xF8000) >> 15) == 0x3) std::cout << "Color 0 AAA" << std::endl;
+                else if (((colorInputFlags & 0xF8000) >> 15) == 0x4) std::cout << "Color 1 RGB" << std::endl;
+                else if (((colorInputFlags & 0xF8000) >> 15) == 0x5) std::cout << "Color 1 AAA" << std::endl;
+                else if (((colorInputFlags & 0xF8000) >> 15) == 0x6) std::cout << "Color 2 RGB" << std::endl;
+                else if (((colorInputFlags & 0xF8000) >> 15) == 0x7) std::cout << "Color 2 AAA" << std::endl;
+                else if (((colorInputFlags & 0xF8000) >> 15) == 0x8) std::cout << "Texture RGB" << std::endl;
+                else if (((colorInputFlags & 0xF8000) >> 15) == 0x9) std::cout << "Texture AAA" << std::endl;
+                else if (((colorInputFlags & 0xF8000) >> 15) == 0xa) std::cout << "Rasterized RGB" << std::endl;
+                else if (((colorInputFlags & 0xF8000) >> 15) == 0xb) std::cout << "Rasterized AAA" << std::endl;
+                else if (((colorInputFlags & 0xF8000) >> 15) == 0xc) std::cout << "One" << std::endl;
+                else if (((colorInputFlags & 0xF8000) >> 15) == 0xd) std::cout << "Half" << std::endl;
+                else if (((colorInputFlags & 0xF8000) >> 15) == 0xe) std::cout << "Konstant RGB" << std::endl;
+                else if (((colorInputFlags & 0xF8000) >> 15) == 0xf) std::cout << "Zero" << std::endl;
+
+
+                subGetLoc += sizeof(colorInputFlags);
+                    
+                uint32_t alphaInputFlags;
+                reader.readInt32(&alphaInputFlags);
+                std::cout << "\tAlpha input flags (color0): ";
+                        if ((alphaInputFlags & 0x1f) == 0x0) std::cout << "Previous stage alpha" << std::endl;
+                else if ((alphaInputFlags & 0x1f) == 0x1) std::cout << "Color 0 alpha" << std::endl;
+                else if ((alphaInputFlags & 0x1f) == 0x2) std::cout << "Color 1 alpha" << std::endl;
+                else if ((alphaInputFlags & 0x1f) == 0x3) std::cout << "Color 2 alpha" << std::endl;
+                else if ((alphaInputFlags & 0x1f) == 0x4) std::cout << "Texture alpha" << std::endl;
+                else if ((alphaInputFlags & 0x1f) == 0x5) std::cout << "Rasterized alpha" << std::endl;
+                else if ((alphaInputFlags & 0x1f) == 0x6) std::cout << "Konstant alpha" << std::endl;
+                else if ((alphaInputFlags & 0x1f) == 0x7) std::cout << "Zero" << std::endl;
+
+                std::cout << "\tAlpha input flags (color1): ";
+                        if (((alphaInputFlags & 0x3E0) >> 5) == 0x0) std::cout << "Previous stage alpha" << std::endl;
+                else if (((alphaInputFlags & 0x3E0) >> 5) == 0x1) std::cout << "Color 0 alpha" << std::endl;
+                else if (((alphaInputFlags & 0x3E0) >> 5) == 0x2) std::cout << "Color 1 alpha" << std::endl;
+                else if (((alphaInputFlags & 0x3E0) >> 5) == 0x3) std::cout << "Color 2 alpha" << std::endl;
+                else if (((alphaInputFlags & 0x3E0) >> 5) == 0x4) std::cout << "Texture alpha" << std::endl;
+                else if (((alphaInputFlags & 0x3E0) >> 5) == 0x5) std::cout << "Rasterized alpha" << std::endl;
+                else if (((alphaInputFlags & 0x3E0) >> 5) == 0x6) std::cout << "Konstant alpha" << std::endl;
+                else if (((alphaInputFlags & 0x3E0) >> 5) == 0x7) std::cout << "Zero" << std::endl;
+
+                std::cout << "\tAlpha input flags (color2): ";
+                        if (((alphaInputFlags & 0x7C00) >> 10) == 0x0) std::cout << "Previous stage alpha" << std::endl;
+                else if (((alphaInputFlags & 0x7C00) >> 10) == 0x1) std::cout << "Color 0 alpha" << std::endl;
+                else if (((alphaInputFlags & 0x7C00) >> 10) == 0x2) std::cout << "Color 1 alpha" << std::endl;
+                else if (((alphaInputFlags & 0x7C00) >> 10) == 0x3) std::cout << "Color 2 alpha" << std::endl;
+                else if (((alphaInputFlags & 0x7C00) >> 10) == 0x4) std::cout << "Texture alpha" << std::endl;
+                else if (((alphaInputFlags & 0x7C00) >> 10) == 0x5) std::cout << "Rasterized alpha" << std::endl;
+                else if (((alphaInputFlags & 0x7C00) >> 10) == 0x6) std::cout << "Konstant alpha" << std::endl;
+                else if (((alphaInputFlags & 0x7C00) >> 10) == 0x7) std::cout << "Zero" << std::endl;
+
+                std::cout << "\tAlpha input flags (color3): ";
+                        if (((alphaInputFlags & 0xF8000) >> 15) == 0x0) std::cout << "Previous stage alpha" << std::endl;
+                else if (((alphaInputFlags & 0xF8000) >> 15) == 0x1) std::cout << "Color 0 alpha" << std::endl;
+                else if (((alphaInputFlags & 0xF8000) >> 15) == 0x2) std::cout << "Color 1 alpha" << std::endl;
+                else if (((alphaInputFlags & 0xF8000) >> 15) == 0x3) std::cout << "Color 2 alpha" << std::endl;
+                else if (((alphaInputFlags & 0xF8000) >> 15) == 0x4) std::cout << "Texture alpha" << std::endl;
+                else if (((alphaInputFlags & 0xF8000) >> 15) == 0x5) std::cout << "Rasterized alpha" << std::endl;
+                else if (((alphaInputFlags & 0xF8000) >> 15) == 0x6) std::cout << "Konstant alpha" << std::endl;
+                else if (((alphaInputFlags & 0xF8000) >> 15) == 0x7) std::cout << "Zero" << std::endl;
+                subGetLoc += sizeof(alphaInputFlags);
+
+                uint32_t colorCombineFlags;
+                reader.readInt32(&colorCombineFlags);
+                std::cout << "\tcolor combine flags: " << std::endl;
+                std::cout << "\tCombiner operator:   " << ((colorCombineFlags & 0x0000000F) >> 0) << std::endl;
+                std::cout << "\tBias:                " << ((colorCombineFlags & 0x00000030) >> 4) << std::endl;
+                std::cout << "\tScale:               " << ((colorCombineFlags & 0x000000C0) >> 6) << std::endl;
+                std::cout << "\tClamp flag:          " << ((colorCombineFlags & 0x00000100) >> 8) << std::endl;
+                std::cout << "\tOutput register:     " << ((colorCombineFlags & 0x00000600) >> 9) << std::endl;
+                std::cout << "\tUnused:              " << ((colorCombineFlags & 0xFFFFF800) >> 11) << std::endl;
+                subGetLoc += sizeof(colorCombineFlags);
+
+                uint32_t alphaCombineFlags;
+                reader.readInt32(&alphaCombineFlags);
+                std::cout << "\talpha combine flags: " << std::endl;
+                std::cout << "\tCombiner operator:   " << ((alphaCombineFlags & 0x0000000F) >> 0) << std::endl;
+                std::cout << "\tBias:                " << ((alphaCombineFlags & 0x00000030) >> 4) << std::endl;
+                std::cout << "\tScale:               " << ((alphaCombineFlags & 0x000000C0) >> 6) << std::endl;
+                std::cout << "\tClamp flag:          " << ((alphaCombineFlags & 0x00000100) >> 8) << std::endl;
+                std::cout << "\tOutput register:     " << ((alphaCombineFlags & 0x00000600) >> 9) << std::endl;
+                std::cout << "\tUnused:              " << ((alphaCombineFlags & 0xFFFFF800) >> 11) << std::endl;
+                subGetLoc += sizeof(alphaCombineFlags);
+
+
+
+                uint8_t padding;
+                reader.readInt8(&padding);
+                subGetLoc += sizeof(padding);
+
+                uint8_t konstAlphaInput;
+                reader.readInt8(&konstAlphaInput);
+                subGetLoc += sizeof(konstAlphaInput);
+
+                uint8_t konstColorInput;
+                reader.readInt8(&konstColorInput);
+                subGetLoc += sizeof(konstColorInput);
+
+                uint8_t rasterizedColorInput;
+                reader.readInt8(&rasterizedColorInput);
+                subGetLoc += sizeof(rasterizedColorInput);
+            }
+            for (int ijkl = 0; ijkl < TEVStageCount; ijkl++)
+            {
+                uint16_t padding;
+                reader.readInt16(&padding);
+                subGetLoc += sizeof(padding);
+
+                uint8_t textureTEVInput;
+                reader.readInt8(&textureTEVInput);
+                std::cout << "texture TEV Input: " << (uint32_t)textureTEVInput << std::endl;
+                subGetLoc += sizeof(textureTEVInput);
+
+                uint8_t texCoordTEVInput;
+                reader.readInt8(&texCoordTEVInput);
+                std::cout << "texture coord TEV Input: " << (uint32_t)texCoordTEVInput << std::endl;
+                subGetLoc += sizeof(texCoordTEVInput);
+            }
+
+            uint32_t texGenCount;
+            reader.readInt32(&texGenCount);
+            std::cout << "texGen Count: " << texGenCount << std::endl;
+            subGetLoc += sizeof(texGenCount);
+
+            for (int ijkl = 0; ijkl < texGenCount; ijkl++)
+            {
+                uint32_t texGenFlag;
+                reader.readInt32(&texGenFlag);
+                std::cout << "texGen flag "<<ijkl<<": " << std::endl;
+                std::cout << "\ttexCoord gen type: ";
+                switch (ijkl&0xF)
+                {
+                    case GX_TG_BUMP0:   std::cout << "GX_TG_BUMP0"  << std::endl; break;
+                    case GX_TG_BUMP1:   std::cout << "GX_TG_BUMP1"  << std::endl; break;
+                    case GX_TG_BUMP2:   std::cout << "GX_TG_BUMP2"  << std::endl; break;
+                    case GX_TG_BUMP3:   std::cout << "GX_TG_BUMP3"  << std::endl; break;
+                    case GX_TG_BUMP4:   std::cout << "GX_TG_BUMP4"  << std::endl; break;
+                    case GX_TG_BUMP5:   std::cout << "GX_TG_BUMP5"  << std::endl; break;
+                    case GX_TG_BUMP6:   std::cout << "GX_TG_BUMP6"  << std::endl; break;
+                    case GX_TG_BUMP7:   std::cout << "GX_TG_BUMP7"  << std::endl; break;
+                    case GX_TG_MTX2x4:  std::cout << "GX_TG_MTX2x4" << std::endl; break;
+                    case GX_TG_MTX3x4:  std::cout << "GX_TG_MTX3x4" << std::endl; break;
+                    case GX_TG_SRTG:    std::cout << "GX_TG_SRTG"   << std::endl; break;
+                }
+                std::cout << "\ttexCoord src: ";
+                switch ((ijkl & 0x1F0) >> 4)
+                {
+                    case GX_TG_BINRM    : std::cout << "GX_TG_BINRM     " << std::endl;break;
+                    case GX_TG_COLOR0   : std::cout << "GX_TG_COLOR0    " << std::endl;break;
+                    case GX_TG_COLOR1   : std::cout << "GX_TG_COLOR1    " << std::endl;break;
+                    case GX_TG_NRM      : std::cout << "GX_TG_NRM       " << std::endl;break;
+                    case GX_TG_POS      : std::cout << "GX_TG_POS       " << std::endl;break;
+                    case GX_TG_TANGENT  : std::cout << "GX_TG_TANGENT   " << std::endl;break;
+                    case GX_TG_TEX0     : std::cout << "GX_TG_TEX0      " << std::endl;break;
+                    case GX_TG_TEX1     : std::cout << "GX_TG_TEX1      " << std::endl;break;
+                    case GX_TG_TEX2     : std::cout << "GX_TG_TEX2      " << std::endl;break;
+                    case GX_TG_TEX3     : std::cout << "GX_TG_TEX3      " << std::endl;break;
+                    case GX_TG_TEX4     : std::cout << "GX_TG_TEX4      " << std::endl;break;
+                    case GX_TG_TEX5     : std::cout << "GX_TG_TEX5      " << std::endl;break;
+                    case GX_TG_TEX6     : std::cout << "GX_TG_TEX6      " << std::endl;break;
+                    case GX_TG_TEX7     : std::cout << "GX_TG_TEX7      " << std::endl;break;
+                    case GX_TG_TEXCOORD0: std::cout << "GX_TG_TEXCOORD0 " << std::endl;break;
+                    case GX_TG_TEXCOORD1: std::cout << "GX_TG_TEXCOORD1 " << std::endl;break;
+                    case GX_TG_TEXCOORD2: std::cout << "GX_TG_TEXCOORD2 " << std::endl;break;
+                    case GX_TG_TEXCOORD3: std::cout << "GX_TG_TEXCOORD3 " << std::endl;break;
+                    case GX_TG_TEXCOORD4: std::cout << "GX_TG_TEXCOORD4 " << std::endl;break;
+                    case GX_TG_TEXCOORD5: std::cout << "GX_TG_TEXCOORD5 " << std::endl;break;
+                    case GX_TG_TEXCOORD6: std::cout << "GX_TG_TEXCOORD6 " << std::endl;break;
+                }
+                std::cout << "\ttex matrix index: ";
+                switch (((ijkl & 0x3E00) >> 9) + 30)
+                {
+                    case GX_IDENTITY: std::cout << "GX_IDENTITY" << std::endl;break;
+                    case GX_TEXMTX0 : std::cout << "GX_TEXMTX0 " << std::endl;break;
+                    case GX_TEXMTX1 : std::cout << "GX_TEXMTX1 " << std::endl;break;
+                    case GX_TEXMTX2 : std::cout << "GX_TEXMTX2 " << std::endl;break;
+                    case GX_TEXMTX3 : std::cout << "GX_TEXMTX3 " << std::endl;break;
+                    case GX_TEXMTX4 : std::cout << "GX_TEXMTX4 " << std::endl;break;
+                    case GX_TEXMTX5 : std::cout << "GX_TEXMTX5 " << std::endl;break;
+                    case GX_TEXMTX6 : std::cout << "GX_TEXMTX6 " << std::endl;break;
+                    case GX_TEXMTX7 : std::cout << "GX_TEXMTX7 " << std::endl;break;
+                    case GX_TEXMTX8 : std::cout << "GX_TEXMTX8 " << std::endl;break;
+                    case GX_TEXMTX9 : std::cout << "GX_TEXMTX9 " << std::endl;break;
+                }
+                std::cout << "\tnormalize flag: " << ((ijkl&0x4000)>0?"on":"off") << std::endl;
+                std::cout << "\tpost transform tex matrix index: ";
+                switch (((ijkl & 0x1F8000) >> 15)+64)
+                {
+                    case GX_DTTIDENTITY: std::cout << "GX_DTTIDENTITY" << std::endl;break;
+                    case GX_DTTMTX0    : std::cout << "GX_DTTMTX0    " << std::endl;break;
+                    case GX_DTTMTX1    : std::cout << "GX_DTTMTX1    " << std::endl;break;
+                    case GX_DTTMTX10   : std::cout << "GX_DTTMTX10   " << std::endl;break;
+                    case GX_DTTMTX11   : std::cout << "GX_DTTMTX11   " << std::endl;break;
+                    case GX_DTTMTX12   : std::cout << "GX_DTTMTX12   " << std::endl;break;
+                    case GX_DTTMTX13   : std::cout << "GX_DTTMTX13   " << std::endl;break;
+                    case GX_DTTMTX14   : std::cout << "GX_DTTMTX14   " << std::endl;break;
+                    case GX_DTTMTX15   : std::cout << "GX_DTTMTX15   " << std::endl;break;
+                    case GX_DTTMTX16   : std::cout << "GX_DTTMTX16   " << std::endl;break;
+                    case GX_DTTMTX17   : std::cout << "GX_DTTMTX17   " << std::endl;break;
+                    case GX_DTTMTX18   : std::cout << "GX_DTTMTX18   " << std::endl;break;
+                    case GX_DTTMTX19   : std::cout << "GX_DTTMTX19   " << std::endl;break;
+                    case GX_DTTMTX2    : std::cout << "GX_DTTMTX2    " << std::endl;break;
+                    case GX_DTTMTX3    : std::cout << "GX_DTTMTX3    " << std::endl;break;
+                    case GX_DTTMTX4    : std::cout << "GX_DTTMTX4    " << std::endl;break;
+                    case GX_DTTMTX5    : std::cout << "GX_DTTMTX5    " << std::endl;break;
+                    case GX_DTTMTX6    : std::cout << "GX_DTTMTX6    " << std::endl;break;
+                    case GX_DTTMTX7    : std::cout << "GX_DTTMTX7    " << std::endl;break;
+                    case GX_DTTMTX8    : std::cout << "GX_DTTMTX8    " << std::endl;break;
+                    case GX_DTTMTX9    : std::cout << "GX_DTTMTX9    " << std::endl;break;
+                }
+                subGetLoc += sizeof(texGenCount);
+            }
+
+            subGetLoc = materialStartingMarker + CMDLMap[AssetID].materialSets[imat].materialEndOffsets[ijk];
+            reader.getloc = subGetLoc;
+
         }
-    else
-        for (int ijk = 0; ijk < CMDLMap[AssetID].MaterialSetCount; ijk++)
-        {
-            subGetLoc += CMDLMap[AssetID].dataSectionSizes[ijk];
-        }
+        upperGetLoc += CMDLMap[AssetID].dataSectionSizes[imat];
+        subGetLoc = upperGetLoc;
+        reader.getloc = subGetLoc;
+
+    }
 
     std::cout << "reading geometry data from " << std::hex << subGetLoc << std::dec << std::endl;
     upperGetLoc = subGetLoc;
@@ -1606,7 +1612,7 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
     //the moment of truth:
 
     memcpy(&CMDLMap[AssetID].geometry.surfaceCount, &rawFile[subGetLoc], 4);
-    CMDLMap[AssetID].geometry.surfaceCount = swap_endian<uint32_t>(CMDLMap[AssetID].geometry.surfaceCount);
+    CMDLMap[AssetID].geometry.surfaceCount = _byteswap_ulong(CMDLMap[AssetID].geometry.surfaceCount);
     std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaceCount)) << "] surface count:" << CMDLMap[AssetID].geometry.surfaceCount << std::dec << std::endl;
     subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaceCount);
 
@@ -1615,7 +1621,7 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
     for (int ijk = 0; ijk < CMDLMap[AssetID].geometry.surfaceCount; ijk++)
     {
         memcpy(&CMDLMap[AssetID].geometry.surfaceOffsets[ijk], &rawFile[subGetLoc], sizeof(uint32_t));
-        CMDLMap[AssetID].geometry.surfaceOffsets[ijk] = swap_endian<uint32_t>(CMDLMap[AssetID].geometry.surfaceOffsets[ijk]);
+        CMDLMap[AssetID].geometry.surfaceOffsets[ijk] = _byteswap_ulong(CMDLMap[AssetID].geometry.surfaceOffsets[ijk]);
         std::cout << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(uint32_t)) << "] surface offset " << ijk << ": " << std::hex << CMDLMap[AssetID].geometry.surfaceOffsets[ijk] << std::dec << std::endl;
         subGetLoc += sizeof(uint32_t);
     }
@@ -1628,61 +1634,61 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
     //loop through each surface
     for (int surfaceNum = 0; surfaceNum < CMDLMap[AssetID].geometry.surfaceCount; surfaceNum++)
     {
-
+        CMDLMap[AssetID].geometry.surfaces[surfaceNum].clearAll();
         for (int ijk = 0; ijk < 3; ijk++)
         {
-            memcpy(&CMDLMap[AssetID].geometry.surfaces[surfaceNum].centerPoint[ijk], &rawFile[subGetLoc], sizeof(float));
-            CMDLMap[AssetID].geometry.surfaces[surfaceNum].centerPoint[ijk] = swap_endian<float>(CMDLMap[AssetID].geometry.surfaces[surfaceNum].centerPoint[ijk]);
+            memcpy(&CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).centerPoint[ijk], &rawFile[subGetLoc], sizeof(float));
+            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).centerPoint[ijk] = swap_endian<float>(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).centerPoint[ijk]);
             subGetLoc += sizeof(float);
         }
-        std::cout << "center point: " << CMDLMap[AssetID].geometry.surfaces[surfaceNum].centerPoint[0] << ", " << CMDLMap[AssetID].geometry.surfaces[surfaceNum].centerPoint[1] << ", " << CMDLMap[AssetID].geometry.surfaces[surfaceNum].centerPoint[2] << std::endl;
+        std::cout << "center point: " << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).centerPoint[0] << ", " << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).centerPoint[1] << ", " << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).centerPoint[2] << std::endl;
 
         memcpy(
-            &CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex,
+            &CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex,
             &rawFile[subGetLoc],
-            sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex)
+            sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex)
         );
-        CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex = swap_endian<uint32_t>(CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex);
-        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex)) << "] matIndex:" << CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex << std::dec << std::endl;
-        subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex);
+        CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex = _byteswap_ulong(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex);
+        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex)) << "] matIndex:" << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex << std::dec << std::endl;
+        subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex);
 
-        memcpy(&CMDLMap[AssetID].geometry.surfaces[surfaceNum].mantissa, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].mantissa));
-        CMDLMap[AssetID].geometry.surfaces[surfaceNum].mantissa = swap_endian<uint16_t>(CMDLMap[AssetID].geometry.surfaces[surfaceNum].mantissa);
-        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].mantissa)) << "] mantissa:" << CMDLMap[AssetID].geometry.surfaces[surfaceNum].mantissa << std::dec << std::endl;
-        subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].mantissa);
+        memcpy(&CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).mantissa, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).mantissa));
+        CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).mantissa = _byteswap_ushort(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).mantissa);
+        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).mantissa)) << "] mantissa:" << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).mantissa << std::dec << std::endl;
+        subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).mantissa);
 
-        memcpy(&CMDLMap[AssetID].geometry.surfaces[surfaceNum].displayListSize, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].displayListSize));
-        CMDLMap[AssetID].geometry.surfaces[surfaceNum].displayListSize = swap_endian<uint16_t>(CMDLMap[AssetID].geometry.surfaces[surfaceNum].displayListSize);
-        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].displayListSize)) << "] display list size:" << CMDLMap[AssetID].geometry.surfaces[surfaceNum].displayListSize << std::dec << std::endl;
-        subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].displayListSize);
+        memcpy(&CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).displayListSize, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).displayListSize));
+        CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).displayListSize = _byteswap_ushort(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).displayListSize);
+        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).displayListSize)) << "] display list size:" << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).displayListSize << std::dec << std::endl;
+        subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).displayListSize);
 
-        memcpy(&CMDLMap[AssetID].geometry.surfaces[surfaceNum].parentModelPointer, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].parentModelPointer));
-        CMDLMap[AssetID].geometry.surfaces[surfaceNum].parentModelPointer = swap_endian<uint32_t>(CMDLMap[AssetID].geometry.surfaces[surfaceNum].parentModelPointer);
-        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].parentModelPointer)) << "] parentModelPointer (always 0):" << CMDLMap[AssetID].geometry.surfaces[surfaceNum].parentModelPointer << std::dec << std::endl;
-        subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].parentModelPointer);
+        memcpy(&CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).parentModelPointer, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).parentModelPointer));
+        CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).parentModelPointer = _byteswap_ulong(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).parentModelPointer);
+        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).parentModelPointer)) << "] parentModelPointer (always 0):" << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).parentModelPointer << std::dec << std::endl;
+        subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).parentModelPointer);
 
-        memcpy(&CMDLMap[AssetID].geometry.surfaces[surfaceNum].nextSurfacePointer, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].nextSurfacePointer));
-        CMDLMap[AssetID].geometry.surfaces[surfaceNum].nextSurfacePointer = swap_endian<uint32_t>(CMDLMap[AssetID].geometry.surfaces[surfaceNum].nextSurfacePointer);
-        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].nextSurfacePointer)) << "] nextSurfacePointer (always 0):" << CMDLMap[AssetID].geometry.surfaces[surfaceNum].nextSurfacePointer << std::dec << std::endl;
-        subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].nextSurfacePointer);
+        memcpy(&CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nextSurfacePointer, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nextSurfacePointer));
+        CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nextSurfacePointer = _byteswap_ulong(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nextSurfacePointer);
+        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nextSurfacePointer)) << "] nextSurfacePointer (always 0):" << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nextSurfacePointer << std::dec << std::endl;
+        subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nextSurfacePointer);
 
-        memcpy(&CMDLMap[AssetID].geometry.surfaces[surfaceNum].extraDataSize, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].extraDataSize));
-        CMDLMap[AssetID].geometry.surfaces[surfaceNum].extraDataSize = swap_endian<uint32_t>(CMDLMap[AssetID].geometry.surfaces[surfaceNum].extraDataSize);
-        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].extraDataSize)) << "] extraDataSize (always 0):" << CMDLMap[AssetID].geometry.surfaces[surfaceNum].extraDataSize << std::dec << std::endl;
-        subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].extraDataSize);
+        memcpy(&CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).extraDataSize, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).extraDataSize));
+        CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).extraDataSize = _byteswap_ulong(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).extraDataSize);
+        std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).extraDataSize)) << "] extraDataSize (always 0):" << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).extraDataSize << std::dec << std::endl;
+        subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).extraDataSize);
 
         CMDLMap[AssetID].geometry.surfaces.resize(CMDLMap[AssetID].geometry.surfaceCount);
         for (int ijk = 0; ijk < 3; ijk++)
         {
-            memcpy(&CMDLMap[AssetID].geometry.surfaces[surfaceNum].surfaceNormal[ijk], &rawFile[subGetLoc], sizeof(float));
-            CMDLMap[AssetID].geometry.surfaces[surfaceNum].surfaceNormal[ijk] = swap_endian<float>(CMDLMap[AssetID].geometry.surfaces[surfaceNum].surfaceNormal[ijk]);
+            memcpy(&CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).surfaceNormal[ijk], &rawFile[subGetLoc], sizeof(float));
+            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).surfaceNormal[ijk] = swap_endian<float>(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).surfaceNormal[ijk]);
             subGetLoc += sizeof(float);
         }
-        std::cout << "surface normal: " << CMDLMap[AssetID].geometry.surfaces[surfaceNum].surfaceNormal[0] << ", " << CMDLMap[AssetID].geometry.surfaces[surfaceNum].surfaceNormal[1] << ", " << CMDLMap[AssetID].geometry.surfaces[surfaceNum].surfaceNormal[2] << std::endl;
+        std::cout << "surface normal: " << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).surfaceNormal[0] << ", " << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).surfaceNormal[1] << ", " << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).surfaceNormal[2] << std::endl;
 
 
 
-        subGetLoc += CMDLMap[AssetID].geometry.surfaces[surfaceNum].extraDataSize;
+        subGetLoc += CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).extraDataSize;
 
         //align get location to 32 bytes before reading primatives
         subGetLoc += 32 - subGetLoc % 32;
@@ -1694,17 +1700,17 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
         //the second one will have 73
         //todo: read until the gx flag hits zero or it hits the end of the section
 
-        memcpy(&CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags));
+        memcpy(&CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags));
         //std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(GXFlags)) << "] GXFlags:" << GXFlags << std::dec << std::endl;
-        subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags);
+        subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags);
 
-        while (CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags > 0)
+        while (CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags > 0)
         {
-            std::bitset<8> GXFlagBits(CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags);
+            std::bitset<8> GXFlagBits(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags);
             std::cout << std::endl;
             //std::cout << GXFlagBits << std::endl;
             std::cout << "GX_VA_NRM type / size | GX_VA_TEX0 type / size" << std::endl;
-            switch (0x7 & CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags) {
+            switch (0x7 & CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags) {
             case 0:
                 std::cout << " GX_NRM_XYZ / GX_F32  |   GX_TEX_ST / GX_F32" << std::endl;
                 break;
@@ -1718,7 +1724,7 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                 std::cout << "fatal error" << std::endl;
             }
             std::cout << "format: ";
-            switch (CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags & 0xF8)
+            switch (CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags & 0xF8)
             {
             case 0x80:
                 std::cout << "Quads" << std::endl;
@@ -1733,14 +1739,14 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                 std::cout << "Triangle Fan" << std::endl;
                 break;
             }
-            memcpy(&CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount));
-            CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount = swap_endian<uint16_t>(CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount);
-            std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount)) << "] vertex count:" << std::dec << CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount << std::dec << std::endl;
-            subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount);
+            memcpy(&CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount));
+            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount = _byteswap_ushort(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount);
+            std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount)) << "] vertex count:" << std::dec << CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount << std::dec << std::endl;
+            subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount);
 
-            //CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.resize(CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.size() + CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount);
-            //CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.resize(CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.size() + CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount);
-            //CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.resize(CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.size() + CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount);
+            //CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).pos_indices.resize(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).pos_indices.size() + CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount);
+            //CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nml_indices.resize(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nml_indices.size() + CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount);
+            //CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).uvc_indices.resize(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).uvc_indices.size() + CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount);
 
             uint16_t pos_index1before = 0;
             uint16_t pos_index2before = 0;
@@ -1778,7 +1784,7 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
             uint16_t uvc7_index2before = 0;
             uint16_t uvc7_indexwaybefore = 0;
 
-            for (int ijk = 0; ijk < CMDLMap[AssetID].geometry.surfaces[surfaceNum].vertexCount; ijk++)
+            for (int ijk = 0; ijk < CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).vertexCount; ijk++)
             {
 
 
@@ -1794,55 +1800,55 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
 
 
 
-                if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x3) > 0) {
+                if ((CMDLMap[AssetID].materialSets.at(0).materials[CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex].vertexAtributeFlags & 0x3) > 0) {
                     memcpy(&pos_vIndex, &rawFile[subGetLoc], sizeof(pos_vIndex));
-                    pos_vIndex = swap_endian<uint16_t>(pos_vIndex);
+                    pos_vIndex = _byteswap_ushort(pos_vIndex);
                     subGetLoc += sizeof(pos_vIndex);
                 }
-                if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0xC) > 0) {
+                if ((CMDLMap[AssetID].materialSets.at(0).materials[CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex].vertexAtributeFlags & 0xC) > 0) {
                     memcpy(&nml_vIndex, &rawFile[subGetLoc], sizeof(nml_vIndex));
-                    nml_vIndex = swap_endian<uint16_t>(nml_vIndex);
+                    nml_vIndex = _byteswap_ushort(nml_vIndex);
                     subGetLoc += sizeof(nml_vIndex);
                 }
-                if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x300) > 0) {
+                if ((CMDLMap[AssetID].materialSets.at(0).materials[CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex].vertexAtributeFlags & 0x300) > 0) {
                     memcpy(&uvc1_vIndex, &rawFile[subGetLoc], sizeof(uvc1_vIndex));
-                    uvc1_vIndex = swap_endian<uint16_t>(uvc1_vIndex);
+                    uvc1_vIndex = _byteswap_ushort(uvc1_vIndex);
                     subGetLoc += sizeof(uvc1_vIndex);
                 }
-                if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0xC00) > 0)
+                if ((CMDLMap[AssetID].materialSets.at(0).materials[CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex].vertexAtributeFlags & 0xC00) > 0)
                 {
                     memcpy(&uvc2_vIndex, &rawFile[subGetLoc], sizeof(uvc2_vIndex));
-                    uvc2_vIndex = swap_endian<uint16_t>(uvc2_vIndex);
+                    uvc2_vIndex = _byteswap_ushort(uvc2_vIndex);
                     subGetLoc += sizeof(uvc2_vIndex);
                 }
-                if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x3000) > 0)
+                if ((CMDLMap[AssetID].materialSets.at(0).materials[CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex].vertexAtributeFlags & 0x3000) > 0)
                 {
                     memcpy(&uvc3_vIndex, &rawFile[subGetLoc], sizeof(uvc3_vIndex));
-                    uvc3_vIndex = swap_endian<uint16_t>(uvc3_vIndex);
+                    uvc3_vIndex = _byteswap_ushort(uvc3_vIndex);
                     subGetLoc += sizeof(uvc3_vIndex);
                 }
-                if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0xC000) > 0)
+                if ((CMDLMap[AssetID].materialSets.at(0).materials[CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex].vertexAtributeFlags & 0xC000) > 0)
                 {
                     memcpy(&uvc4_vIndex, &rawFile[subGetLoc], sizeof(uvc4_vIndex));
-                    uvc4_vIndex = swap_endian<uint16_t>(uvc4_vIndex);
+                    uvc4_vIndex = _byteswap_ushort(uvc4_vIndex);
                     subGetLoc += sizeof(uvc4_vIndex);
                 }
-                if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x30000) > 0)
+                if ((CMDLMap[AssetID].materialSets.at(0).materials[CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex].vertexAtributeFlags & 0x30000) > 0)
                 {
                     memcpy(&uvc5_vIndex, &rawFile[subGetLoc], sizeof(uvc5_vIndex));
-                    uvc5_vIndex = swap_endian<uint16_t>(uvc5_vIndex);
+                    uvc5_vIndex = _byteswap_ushort(uvc5_vIndex);
                     subGetLoc += sizeof(uvc5_vIndex);
                 }
-                if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0xC0000) > 0)
+                if ((CMDLMap[AssetID].materialSets.at(0).materials[CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex].vertexAtributeFlags & 0xC0000) > 0)
                 {
                     memcpy(&uvc6_vIndex, &rawFile[subGetLoc], sizeof(uvc6_vIndex));
-                    uvc6_vIndex = swap_endian<uint16_t>(uvc6_vIndex);
+                    uvc6_vIndex = _byteswap_ushort(uvc6_vIndex);
                     subGetLoc += sizeof(uvc6_vIndex);
                 }
-                if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x300000) > 0)
+                if ((CMDLMap[AssetID].materialSets.at(0).materials[CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex].vertexAtributeFlags & 0x300000) > 0)
                 {
                     memcpy(&uvc7_vIndex, &rawFile[subGetLoc], sizeof(uvc7_vIndex));
-                    uvc7_vIndex = swap_endian<uint16_t>(uvc7_vIndex);
+                    uvc7_vIndex = _byteswap_ushort(uvc7_vIndex);
                     subGetLoc += sizeof(uvc7_vIndex);
                 }
                 if (ijk == 0) {
@@ -1861,72 +1867,72 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                 //    CMDLMap[AssetID].geometry.vertexCoords.data()[vIndex * 3 + 1] << ", " <<
                 //    CMDLMap[AssetID].geometry.vertexCoords.data()[vIndex * 3 + 2] <<
                 //    std::endl;
-                if (((CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags & 0xF8) == 0xA0)) {
+                if (((CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags & 0xF8) == 0xA0)) {
                     if (ijk > 1)
                     {
-                        if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x3) > 0)
+                        if ((CMDLMap[AssetID].materialSets.at(0).materials[CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex].vertexAtributeFlags & 0x3) > 0)
                         {
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.push_back((pos_indexwaybefore));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.push_back((pos_index1before));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.push_back((pos_vIndex));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).pos_indices.push_back((pos_indexwaybefore));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).pos_indices.push_back((pos_index1before));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).pos_indices.push_back((pos_vIndex));
                         }
-                        if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0xC) > 0)
+                        if ((CMDLMap[AssetID].materialSets.at(0).materials[CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex].vertexAtributeFlags & 0xC) > 0)
                         {
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.push_back((nml_indexwaybefore));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.push_back((nml_index1before));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.push_back((nml_vIndex));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nml_indices.push_back((nml_indexwaybefore));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nml_indices.push_back((nml_index1before));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nml_indices.push_back((nml_vIndex));
                         }
-                        if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x300) > 0)
+                        if ((CMDLMap[AssetID].materialSets.at(0).materials[CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex].vertexAtributeFlags & 0x300) > 0)
                         {
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc1_indexwaybefore));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc1_index1before));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc1_vIndex));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).uvc_indices.push_back((uvc1_indexwaybefore));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).uvc_indices.push_back((uvc1_index1before));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).uvc_indices.push_back((uvc1_vIndex));
                         }
                     }
                 }
-                else if (((CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags & 0xF8) == 0x90))
+                else if (((CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags & 0xF8) == 0x90))
                 {
                     if (ijk > 1 && (ijk + 1) % 3 == 0) {
-                        if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x3) > 0)
+                        if ((CMDLMap[AssetID].materialSets.at(0).materials[CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex].vertexAtributeFlags & 0x3) > 0)
                         {
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.push_back((pos_index1before));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.push_back((pos_index2before));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.push_back((pos_vIndex));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).pos_indices.push_back((pos_index1before));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).pos_indices.push_back((pos_index2before));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).pos_indices.push_back((pos_vIndex));
                         }
-                        if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0xC) > 0)
+                        if ((CMDLMap[AssetID].materialSets.at(0).materials[CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex].vertexAtributeFlags & 0xC) > 0)
                         {
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.push_back((nml_index1before));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.push_back((nml_index2before));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.push_back((nml_vIndex));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nml_indices.push_back((nml_index1before));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nml_indices.push_back((nml_index2before));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nml_indices.push_back((nml_vIndex));
                         }
-                        if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x300) > 0)
+                        if ((CMDLMap[AssetID].materialSets.at(0).materials[CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex].vertexAtributeFlags & 0x300) > 0)
                         {
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc1_index1before));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc1_index2before));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc1_vIndex));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).uvc_indices.push_back((uvc1_index1before));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).uvc_indices.push_back((uvc1_index2before));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).uvc_indices.push_back((uvc1_vIndex));
                         }
                     }
                 }
-                else if (((CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags & 0xF8) == 0x98))
+                else if (((CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags & 0xF8) == 0x98))
                 {
                     if (ijk > 1) {
-                        if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x3) > 0)
+                        if ((CMDLMap[AssetID].materialSets.at(0).materials[CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex].vertexAtributeFlags & 0x3) > 0)
                         {
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.push_back((pos_index2before));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.push_back((pos_index1before));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].pos_indices.push_back((pos_vIndex));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).pos_indices.push_back((pos_index2before));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).pos_indices.push_back((pos_index1before));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).pos_indices.push_back((pos_vIndex));
                         }
-                        if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0xC) > 0)
+                        if ((CMDLMap[AssetID].materialSets.at(0).materials[CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex].vertexAtributeFlags & 0xC) > 0)
                         {
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.push_back((nml_index2before));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.push_back((nml_index1before));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].nml_indices.push_back((nml_vIndex));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nml_indices.push_back((nml_index2before));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nml_indices.push_back((nml_index1before));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).nml_indices.push_back((nml_vIndex));
                         }
-                        if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0x300) > 0)
+                        if ((CMDLMap[AssetID].materialSets.at(0).materials[CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex].vertexAtributeFlags & 0x300) > 0)
                         {
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc1_index2before));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc1_index1before));
-                            CMDLMap[AssetID].geometry.surfaces[surfaceNum].uvc_indices.push_back((uvc1_vIndex));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).uvc_indices.push_back((uvc1_index2before));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).uvc_indices.push_back((uvc1_index1before));
+                            CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).uvc_indices.push_back((uvc1_vIndex));
                         }
 
                     }
@@ -1955,11 +1961,11 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                 uvc7_index1before = uvc7_vIndex;
 
 
-                //if ((CMDLMap[AssetID].materialSets[0].materials[CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex].vertexAtributeFlags & 0xC) > 0)
+                //if ((CMDLMap[AssetID].materialSets.at(0).materials[CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex].vertexAtributeFlags & 0xC) > 0)
                 //{
                 //    uint16_t vIndex;variable 'pos_vIndex' is being used
                 //    memcpy(&vIndex, &rawFile[subGetLoc], sizeof(vIndex));
-                //    vIndex = swap_endian<uint16_t>(vIndex);
+                //    vIndex = _byteswap_ushort(vIndex);
                 //    std::cout << "vertex " << ijk << " normal: " <<
                 //        CMDLMap[AssetID].geometry.normals.data()[vIndex * 3 + 0] << ", " <<
                 //        CMDLMap[AssetID].geometry.normals.data()[vIndex * 3 + 1] << ", " <<
@@ -1972,22 +1978,22 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
                 ////todo: color inputs
                 //
                 //
-                //if ((CMDLMap[AssetID].materialSets.data()[0/*CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0x300) > 0)
+                //if ((CMDLMap[AssetID].materialSets.data()[0/*CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex*/].vertexAtributeFlags & 0x300) > 0)
                 //{
                 //    uint16_t vIndex;
                 //    memcpy(&vIndex, &rawFile[subGetLoc], sizeof(vIndex));
-                //    vIndex = swap_endian<uint16_t>(vIndex);
+                //    vIndex = _byteswap_ushort(vIndex);
                 //    std::cout << "vertex " << ijk << " UV: " <<
                 //        CMDLMap[AssetID].geometry.floatUVCoords.data()[vIndex * 2 + 0] << ", " <<
                 //        CMDLMap[AssetID].geometry.floatUVCoords.data()[vIndex * 2 + 1] <<
                 //        std::endl;
                 //    subGetLoc += sizeof(vIndex);
                 //}
-                //if ((CMDLMap[AssetID].materialSets.data()[0/*CMDLMap[AssetID].geometry.surfaces[surfaceNum].matIndex*/].vertexAtributeFlags & 0xC00) > 0)
+                //if ((CMDLMap[AssetID].materialSets.data()[0/*CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).matIndex*/].vertexAtributeFlags & 0xC00) > 0)
                 //{
                 //    uint16_t vIndex;
                 //    memcpy(&vIndex, &rawFile[subGetLoc], sizeof(vIndex));
-                //    vIndex = swap_endian<uint16_t>(vIndex);
+                //    vIndex = _byteswap_ushort(vIndex);
                 //    std::cout << "vertex " << ijk << " UV: " <<
                 //        CMDLMap[AssetID].geometry.floatUVCoords.data()[vIndex * 2 + 0] << ", " <<
                 //        CMDLMap[AssetID].geometry.floatUVCoords.data()[vIndex * 2 + 1] <<
@@ -2024,13 +2030,13 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
 
             }
 
-            memcpy(&CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags));
+            memcpy(&CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags, &rawFile[subGetLoc], sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags));
             //std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(GXFlags)) << "] GXFlags:" << GXFlags << std::dec << std::endl;
             
-            subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags);
+            subGetLoc += sizeof(CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags);
 
 
-            if (CMDLMap[AssetID].geometry.surfaces[surfaceNum].GXFlags==0) {
+            if (CMDLMap[AssetID].geometry.surfaces.at(surfaceNum).GXFlags==0) {
 
                 //upperGetLoc += CMDLMap[AssetID].geometry.surfaceOffsets[surfaceNum];
                 //subGetLoc = upperGetLoc;
@@ -2045,8 +2051,6 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
 
 
         }
-        //todo: temp
-        //break;
     }
 }
 
@@ -2068,10 +2072,10 @@ void loadPak(std::string filename)
     f.read(reinterpret_cast<char*>(&unused), sizeof(unused));
     f.read(reinterpret_cast<char*>(&assetCount_namedResourcesTable), sizeof(assetCount_namedResourcesTable));
 
-    versionNumberMajor = swap_endian<int16_t>(versionNumberMajor);
-    versionNumberMinor = swap_endian<int16_t>(versionNumberMinor);
-    unused = swap_endian<int32_t>(unused);
-    assetCount_namedResourcesTable = swap_endian<int32_t>(assetCount_namedResourcesTable);
+    versionNumberMajor = _byteswap_ushort(versionNumberMajor);
+    versionNumberMinor = _byteswap_ushort(versionNumberMinor);
+    unused = _byteswap_ulong(unused);
+    assetCount_namedResourcesTable = _byteswap_ulong(assetCount_namedResourcesTable);
 
     std::cout << "Version Number (Major)    " << versionNumberMajor << std::endl;
     std::cout << "Version Number (Minor)    " << versionNumberMinor << std::endl;
@@ -2089,7 +2093,7 @@ void loadPak(std::string filename)
         f.read(fourCC, 4);
         f.read(reinterpret_cast<char*>(&AssetID), sizeof(AssetID));
         f.read(reinterpret_cast<char*>(&nameLength), sizeof(nameLength));
-        nameLength = swap_endian<int32_t>(nameLength);
+        nameLength = _byteswap_ulong(nameLength);
         nameString.resize(nameLength);
         f.read(nameString.data(), nameLength);
         std::cout << nameLength << std::endl;
@@ -2102,7 +2106,7 @@ void loadPak(std::string filename)
 
     f.read(reinterpret_cast<char*>(&assetCount_resourcesTable), sizeof(assetCount_resourcesTable));
 
-    assetCount_resourcesTable = swap_endian<int32_t>(assetCount_resourcesTable);
+    assetCount_resourcesTable = _byteswap_ulong(assetCount_resourcesTable);
     std::cout << "asset count (resource table)  " << assetCount_resourcesTable << std::endl;
     //for (int i = 0; i < assetCount_resourcesTable; i++) {
     for (int i = 0; i < 200; i++) {
@@ -2120,10 +2124,10 @@ void loadPak(std::string filename)
 
 
 
-        compressionFlag = swap_endian<int32_t>(compressionFlag);
-        AssetID = swap_endian<int32_t>(AssetID);
-        size = swap_endian<int32_t>(size);
-        offset = swap_endian<int32_t>(offset);
+        compressionFlag = _byteswap_ulong(compressionFlag);
+        AssetID = _byteswap_ulong(AssetID);
+        size = _byteswap_ulong(size);
+        offset = _byteswap_ulong(offset);
 
         std::cout << "\tcompression flag        " << compressionFlag << std::endl;
         std::cout << "\tAsset Type              "; std::cout.write(fourCC, 4) << std::endl;
@@ -2137,7 +2141,7 @@ void loadPak(std::string filename)
             int32_t decompressedSize;
 
             f.read(reinterpret_cast<char*>(&decompressedSize), sizeof(decompressedSize));
-            decompressedSize = swap_endian<int32_t>(decompressedSize);
+            decompressedSize = _byteswap_ulong(decompressedSize);
             //std::cout << "\t\tdecompressed size: " << decompressedSize << std::endl;
             uLong ucompSize = decompressedSize;
             std::vector<char> zlibdata;
@@ -2185,28 +2189,28 @@ void loadPak(std::string filename)
                 uint32_t txtrFormat;
 
                 memcpy(&txtrFormat, &rawFile[subGetLoc], sizeof(txtrFormat));
-                txtrFormat = swap_endian<uint32_t>(txtrFormat);
+                txtrFormat = _byteswap_ulong(txtrFormat);
                 std::cout << std::hex << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(txtrFormat)) << "] texture format:" << txtrFormat << std::dec << std::endl;
                 subGetLoc += sizeof(txtrFormat);
 
                 uint16_t txtrWidth;
 
                 memcpy(&txtrWidth, &rawFile[subGetLoc], sizeof(txtrWidth));
-                txtrWidth = swap_endian<uint16_t>(txtrWidth);
+                txtrWidth = _byteswap_ushort(txtrWidth);
                 std::cout << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(txtrWidth)) << "] texture width:" << txtrWidth << std::dec << std::endl;
                 subGetLoc += sizeof(txtrWidth);
 
                 uint16_t txtrHeight;
 
                 memcpy(&txtrHeight, &rawFile[subGetLoc], sizeof(txtrHeight));
-                txtrHeight = swap_endian<uint16_t>(txtrHeight);
+                txtrHeight = _byteswap_ushort(txtrHeight);
                 std::cout << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(txtrHeight)) << "] texture height:" << txtrHeight << std::dec << std::endl;
                 subGetLoc += sizeof(txtrHeight);
 
                 uint32_t mipCount;
 
                 memcpy(&mipCount, &rawFile[subGetLoc], sizeof(mipCount));
-                mipCount = swap_endian<uint32_t>(mipCount);
+                mipCount = _byteswap_ulong(mipCount);
                 std::cout << "[" << subGetLoc << " :: " << (subGetLoc + sizeof(mipCount)) << "] mip count:" << mipCount << std::dec << std::endl;
                 subGetLoc += sizeof(mipCount);
 
@@ -2230,16 +2234,7 @@ void loadPak(std::string filename)
             }
             else if (fourCC[0] == 'C' && fourCC[1] == 'M' && fourCC[2] == 'D' && fourCC[3] == 'L')
             {
-                //if (tempcounter > 0)
-                //    continue;
-                //else
-                loadCMDL(rawFile, AssetID);
-                rawFileLength = rawFile.size();
-                std::ofstream wf(ihj + "_data.dat", std::ios::out | std::ios::binary);
-                ihj++;
-                for (int i = 0; i < rawFileLength; i++)
-                    wf.write(&rawFile[i], sizeof(char));
-                wf.close();
+                
 
                 tempcounter++;
             }

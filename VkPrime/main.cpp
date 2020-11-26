@@ -16,7 +16,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/hash.hpp>
-
+#include <stdlib.h>
 #include <iostream>
 #include <stdexcept>
 #include <algorithm>
@@ -1090,7 +1090,7 @@ private:
         VkPhysicalDeviceProperties physicalDeviceProperties;
         vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
 
-        VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+        const VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
         if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
         if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
         if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }
@@ -1203,8 +1203,8 @@ private:
         barrier.subresourceRange.baseArrayLayer = 0;
         barrier.subresourceRange.layerCount = 1;
 
-        VkPipelineStageFlags sourceStage;
-        VkPipelineStageFlags destinationStage;
+        VkPipelineStageFlags sourceStage = NULL;
+        VkPipelineStageFlags destinationStage = NULL;
 
         if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
             barrier.srcAccessMask = 0;
@@ -1291,7 +1291,7 @@ private:
         //slug: 0x19A32D30 (working)
         //horn: 0x55BAB970 (working)
         //bolt: 0xBFE4DAA0 (working)
-        //giant boss: 0xEC81CD52 (works sometimes)
+        //giant boss: 0xEC81CD52 (works)
         //grump: 0x00576D37
         //mlvl: 0x83F6FF6F
         //mlvl skybox cmdl: 0x817968F9
@@ -1312,7 +1312,7 @@ private:
         //giant monster: 0x07D51E01
         //tower: 0xD1BA6B82
         //tiny piece of phazon: 0x5F8D540D 
-        tempCMDLID = 0x072DD016;
+        tempCMDLID = 0xD3D3AB81;
         CMDL cmdl = *loadCMDL(tempCMDLID, "Metroid2.pak");
         imageStuffs.resize(cmdl.materialSets[0].textureCount);
         for(int i = 0;i<cmdl.materialSets[0].textureCount;i++)
@@ -1358,48 +1358,48 @@ private:
 
 
         objects.push_back(m);
+        /*
+        std::ofstream wf("GiantBoss.obj", std::ios::out | std::ios::binary);
         
-        //std::ofstream wf("objectDump.dat", std::ios::out | std::ios::binary);
-        //
-        //for (int i = 0; i < cmdl.geometry.vertexCoords.size(); i++) {
-        //    std::string ln = "v ";
-        //    ln += std::to_string(cmdl.geometry.vertexCoords[i].x);
-        //    ln += " ";
-        //    ln += std::to_string(cmdl.geometry.vertexCoords[i].y);
-        //    ln += " ";
-        //    ln += std::to_string(cmdl.geometry.vertexCoords[i].z);
-        //    ln += "\n";
-        //    wf.write(ln.data(), ln.length());
-        //}
-        //for (int i = 0; i < cmdl.geometry.floatUVCoords.size(); i++) {
-        //    std::string ln = "vt ";
-        //    ln += std::to_string(cmdl.geometry.floatUVCoords[i].x);
-        //    ln += " ";
-        //    ln += std::to_string(cmdl.geometry.floatUVCoords[i].y);
-        //    ln += "\n";
-        //    wf.write(ln.data(), ln.length());
-        //}
-        //for (int i = 0; i < cmdl.geometry.normals.size(); i++) {
-        //    std::string ln = "vn ";
-        //    ln += std::to_string(cmdl.geometry.normals[i].x);
-        //    ln += " ";
-        //    ln += std::to_string(cmdl.geometry.normals[i].y);
-        //    ln += " ";
-        //    ln += std::to_string(cmdl.geometry.normals[i].z);
-        //    ln += "\n";
-        //    wf.write(ln.data(), ln.length());
-        //}
-        //for(int x = 0;x<cmdl.geometry.surfaceCount;x++)
-        //for (int i = 0; i < cmdl.geometry.surfaces[x].pos_indices.size(); i+=3)
-        //{
-        //    std::string ln = "f ";
-        //    ln += std::to_string(cmdl.geometry.surfaces[x].pos_indices[i + 0]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].uvc_indices[i + 0]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].nml_indices[i + 0]+1)+ " ";
-        //    ln += std::to_string(cmdl.geometry.surfaces[x].pos_indices[i + 1]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].uvc_indices[i + 1]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].nml_indices[i + 1]+1)+ " ";
-        //    ln += std::to_string(cmdl.geometry.surfaces[x].pos_indices[i + 2]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].uvc_indices[i + 2]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].nml_indices[i + 2]+1)+ "\n";
-        //    wf.write(ln.data(), ln.length());
-        //}
-        //wf.close();
-
+        for (int i = 0; i < cmdl.geometry.vertexCoords.size(); i++) {
+            std::string ln = "v ";
+            ln += std::to_string(cmdl.geometry.vertexCoords[i].x);
+            ln += " ";
+            ln += std::to_string(cmdl.geometry.vertexCoords[i].y);
+            ln += " ";
+            ln += std::to_string(cmdl.geometry.vertexCoords[i].z);
+            ln += "\n";
+            wf.write(ln.data(), ln.length());
+        }
+        for (int i = 0; i < cmdl.geometry.floatUVCoords.size(); i++) {
+            std::string ln = "vt ";
+            ln += std::to_string(cmdl.geometry.floatUVCoords[i].x);
+            ln += " ";
+            ln += std::to_string(cmdl.geometry.floatUVCoords[i].y);
+            ln += "\n";
+            wf.write(ln.data(), ln.length());
+        }
+        for (int i = 0; i < cmdl.geometry.normals.size(); i++) {
+            std::string ln = "vn ";
+            ln += std::to_string(cmdl.geometry.normals[i].x);
+            ln += " ";
+            ln += std::to_string(cmdl.geometry.normals[i].y);
+            ln += " ";
+            ln += std::to_string(cmdl.geometry.normals[i].z);
+            ln += "\n";
+            wf.write(ln.data(), ln.length());
+        }
+        for(int x = 0;x<cmdl.geometry.surfaceCount;x++)
+        for (int i = 0; i < cmdl.geometry.surfaces[x].pos_indices.size(); i+=3)
+        {
+            std::string ln = "f ";
+            ln += std::to_string(cmdl.geometry.surfaces[x].pos_indices[i + 0]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].uvc_indices[i + 0]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].nml_indices[i + 0]+1)+ " ";
+            ln += std::to_string(cmdl.geometry.surfaces[x].pos_indices[i + 1]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].uvc_indices[i + 1]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].nml_indices[i + 1]+1)+ " ";
+            ln += std::to_string(cmdl.geometry.surfaces[x].pos_indices[i + 2]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].uvc_indices[i + 2]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].nml_indices[i + 2]+1)+ "\n";
+            wf.write(ln.data(), ln.length());
+        }
+        wf.close();
+        */
     }
 
     void createVertexBuffer() {

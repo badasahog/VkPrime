@@ -21,6 +21,9 @@
     <ClCompile Include="PrimeAssimp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="FileReader.hpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PrimeAssimp.hpp">
@@ -29,5 +32,10 @@
     <ClInclude Include="GXCore.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="FileReader.asm">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
