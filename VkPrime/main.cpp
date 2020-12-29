@@ -3,8 +3,6 @@
 #include <crtdbg.h>
 
 #ifdef _DEBUG
-#define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
-#define DBG_NEW new
 #endif
 
 #define GLFW_INCLUDE_VULKAN
@@ -1318,6 +1316,9 @@ private:
         imageStuffs.resize(cmdl.materialSets[0].textureCount);
         for(int i = 0;i<cmdl.materialSets[0].textureCount;i++)
             loadTXTR(cmdl.materialSets[0].textureFileIDs[i], "Metroid2.pak");
+
+
+        //MREA area = *loadMREA(mlvl.areaArray[0].areaMREA_ID, "Metroid2.pak");
         //MLVL mlvl = *loadMLVL(0x83F6FF6F, "Metroid2.pak");
         //
         //loadSTRG(mlvl.worldNameID,"Metroid2.pak");
