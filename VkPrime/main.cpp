@@ -1388,15 +1388,15 @@ private:
         //giant monster: 0x07D51E01
         //tower: 0xD1BA6B82
         //tiny piece of phazon: 0x5F8D540D
-        MLVL mlvl = *loadMLVL(0x83F6FF6F, "Metroid2.pak");
-        tempCMDLID = mlvl.defaultSkyboxID;
+        //MLVL mlvl = *loadMLVL(0x83F6FF6F, "Metroid2.pak");
+        tempCMDLID = 0x00576D37;// mlvl.defaultSkyboxID;
         CMDL cmdl = *loadCMDL(tempCMDLID, "Metroid2.pak");
         imageStuffs.resize(cmdl.materialSets[0].textureCount);
         for(int i = 0;i<cmdl.materialSets[0].textureCount;i++)
             loadTXTR(cmdl.materialSets[0].textureFileIDs[i], "Metroid2.pak");
 
 
-        MREA area = *loadMREA(mlvl.areaArray[0].areaMREA_ID, "Metroid2.pak");
+        //MREA area = *loadMREA(mlvl.areaArray[0].areaMREA_ID, "Metroid2.pak");
         //MLVL mlvl = *loadMLVL(0x83F6FF6F, "Metroid2.pak");
         //
         //loadSTRG(mlvl.worldNameID,"Metroid2.pak");
@@ -1406,7 +1406,7 @@ private:
         //    loadSTRG(mlvl.areaArray[i].areaNameID,"Metroid2.pak");
         //}
         pushToScene(&cmdl);
-        pushToScene(loadCMDL(0x729EA8BA, "Metroid2.pak"));
+        //pushToScene(loadCMDL(0x729EA8BA, "Metroid2.pak"));
     }
 
     void createVertexBuffer() {

@@ -1092,13 +1092,14 @@ void loadGeometry(FileReader reader, MPGeometry* geometry, MaterialSet materialS
             * location where each surface starts
             */
             //TODO: calculate display list size without the file's built in one
-            if (reader.getloc - surfaceStartLoc > surface->displayListSize + 0x30 + surface->extraDataSize) {
+            if (reader.getloc - surfaceStartLoc + 5 > reader.getSectionSize()) {
             //if (reader.getloc - surfaceStartLoc + 5 > geometry->surfaceOffsets[surfaceNum+1] - geometry->surfaceOffsets[surfaceNum]) {
 
                 std::cout << __LINE__ << " hit end of display list" << std::endl;
                 //TODO: still needs to jump to the start of the next section!
 
-                reader.getloc = surfaceAnchor + geometry->surfaceOffsets[surfaceNum];
+                //reader.getloc = surfaceAnchor + geometry->surfaceOffsets[surfaceNum];
+                reader.toNextSection();
                 //return;
                 break;
 
@@ -1109,12 +1110,10 @@ void loadGeometry(FileReader reader, MPGeometry* geometry, MaterialSet materialS
             if (surface->GXFlags == 0)
             {
                 std::cout << __LINE__ << " GXFlags hit 0" << std::endl;
-                reader.getloc = surfaceAnchor + geometry->surfaceOffsets[surfaceNum];
+                //reader.getloc = surfaceAnchor + geometry->surfaceOffsets[surfaceNum];
+                reader.toNextSection();
                 break;
             }
-            
-
-
         }
     }
     
