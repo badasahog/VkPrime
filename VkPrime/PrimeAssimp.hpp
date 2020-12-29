@@ -1082,23 +1082,35 @@ void loadGeometry(FileReader reader, MPGeometry* geometry, MaterialSet materialS
             //std::cout << (CMDLMap[AssetID].geometry.surfaceOffsets[surfaceNum]) - (subGetLoc - upperGetLoc) << std::endl;
             //break;
             //if the amount of data left to read for this surface is less than one byte, go to the next surface
+            /*
+            * find: the amount left to the current surface
+            * 
+            * data I have:
+            * current location
+            * location where the surfaces started
+            * location where the current surface started
+            * location where each surface starts
+            */
+            //TODO: calculate display list size without the file's built in one
+            if (reader.getloc - surfaceStartLoc > surface->displayListSize + 0x30 + surface->extraDataSize) {
+            //if (reader.getloc - surfaceStartLoc + 5 > geometry->surfaceOffsets[surfaceNum+1] - geometry->surfaceOffsets[surfaceNum]) {
+
+                std::cout << __LINE__ << " hit end of display list" << std::endl;
+                //TODO: still needs to jump to the start of the next section!
+
+                reader.getloc = surfaceAnchor + geometry->surfaceOffsets[surfaceNum];
+                //return;
+                break;
+
+            }
+
             reader.readInt8(&surface->GXFlags);
 
             if (surface->GXFlags == 0)
             {
-                std::cout << __LINE__ << " TRIGGERED TRIGGERED TRIGGERED" << std::endl;
+                std::cout << __LINE__ << " GXFlags hit 0" << std::endl;
                 reader.getloc = surfaceAnchor + geometry->surfaceOffsets[surfaceNum];
                 break;
-            }
-            if ((geometry->surfaceOffsets[surfaceNum]) - (reader.getloc - surfaceStartLoc) < 1) {
-
-                std::cout << __LINE__ <<" TRIGGERED TRIGGERED TRIGGERED" << std::endl;
-                //TODO: still needs to jump to the start of the next section!
-                
-                reader.getloc = surfaceAnchor + geometry->surfaceOffsets[surfaceNum];
-                return;
-                break;
-            
             }
             
 

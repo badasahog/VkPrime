@@ -1256,6 +1256,84 @@ private:
 
         endSingleTimeCommands(commandBuffer);
     }
+    void pushToScene(CMDL* cmdl)
+    {
+        Mesh m;
+        int a = 0;
+        m.startIndex = indices.size();
+        m.vertOffset = vertices.size();
+        for (int i = 0; i < cmdl->geometry.surfaces.size(); i++)
+        {
+            for (int j = 0; j < cmdl->geometry.surfaces[i].pos_indices.size(); j++)
+            {
+                Vertex v;
+                v.pos = cmdl->geometry.vertexCoords[cmdl->geometry.surfaces[i].pos_indices[j]];
+
+                v.texCoord = (
+                    cmdl->geometry.floatUVCoords.size() == 0
+                    ?
+                    glm::vec2(0, 0)
+                    :
+                    (cmdl->geometry.floatUVCoords[cmdl->geometry.surfaces[i].uvc_indices[j]])
+                    );
+                v.color = glm::vec3(0, 0, 0);
+                v.textureIndex = cmdl->materialSets[0].materials[cmdl->geometry.surfaces[i].matIndex].textureFileIndices[0];
+                m.vertices.push_back(v);
+                m.indices.push_back(a);
+                a++;
+            }
+        }
+        indices.insert(indices.end(), m.indices.begin(), m.indices.end());
+        vertices.insert(vertices.end(), m.vertices.begin(), m.vertices.end());
+
+        m.num_indices = indices.size() - m.startIndex;
+
+
+
+        objects.push_back(m);
+        /*
+        std::ofstream wf("GiantBoss.obj", std::ios::out | std::ios::binary);
+
+        for (int i = 0; i < cmdl.geometry.vertexCoords.size(); i++) {
+            std::string ln = "v ";
+            ln += std::to_string(cmdl.geometry.vertexCoords[i].x);
+            ln += " ";
+            ln += std::to_string(cmdl.geometry.vertexCoords[i].y);
+            ln += " ";
+            ln += std::to_string(cmdl.geometry.vertexCoords[i].z);
+            ln += "\n";
+            wf.write(ln.data(), ln.length());
+        }
+        for (int i = 0; i < cmdl.geometry.floatUVCoords.size(); i++) {
+            std::string ln = "vt ";
+            ln += std::to_string(cmdl.geometry.floatUVCoords[i].x);
+            ln += " ";
+            ln += std::to_string(cmdl.geometry.floatUVCoords[i].y);
+            ln += "\n";
+            wf.write(ln.data(), ln.length());
+        }
+        for (int i = 0; i < cmdl.geometry.normals.size(); i++) {
+            std::string ln = "vn ";
+            ln += std::to_string(cmdl.geometry.normals[i].x);
+            ln += " ";
+            ln += std::to_string(cmdl.geometry.normals[i].y);
+            ln += " ";
+            ln += std::to_string(cmdl.geometry.normals[i].z);
+            ln += "\n";
+            wf.write(ln.data(), ln.length());
+        }
+        for(int x = 0;x<cmdl.geometry.surfaceCount;x++)
+        for (int i = 0; i < cmdl.geometry.surfaces[x].pos_indices.size(); i+=3)
+        {
+            std::string ln = "f ";
+            ln += std::to_string(cmdl.geometry.surfaces[x].pos_indices[i + 0]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].uvc_indices[i + 0]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].nml_indices[i + 0]+1)+ " ";
+            ln += std::to_string(cmdl.geometry.surfaces[x].pos_indices[i + 1]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].uvc_indices[i + 1]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].nml_indices[i + 1]+1)+ " ";
+            ln += std::to_string(cmdl.geometry.surfaces[x].pos_indices[i + 2]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].uvc_indices[i + 2]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].nml_indices[i + 2]+1)+ "\n";
+            wf.write(ln.data(), ln.length());
+        }
+        wf.close();
+        */
+    }
     void loadScene()
     {
         //loadPak("Metroid2.pak");
@@ -1318,7 +1396,7 @@ private:
             loadTXTR(cmdl.materialSets[0].textureFileIDs[i], "Metroid2.pak");
 
 
-        //MREA area = *loadMREA(mlvl.areaArray[0].areaMREA_ID, "Metroid2.pak");
+        MREA area = *loadMREA(mlvl.areaArray[0].areaMREA_ID, "Metroid2.pak");
         //MLVL mlvl = *loadMLVL(0x83F6FF6F, "Metroid2.pak");
         //
         //loadSTRG(mlvl.worldNameID,"Metroid2.pak");
@@ -1327,81 +1405,8 @@ private:
         //{
         //    loadSTRG(mlvl.areaArray[i].areaNameID,"Metroid2.pak");
         //}
-        Mesh m;
-        int a = 0;
-        m.startIndex = indices.size();
-        m.vertOffset = vertices.size();
-        for (int i = 0; i < cmdl.geometry.surfaces.size(); i++)
-        {
-            for (int j = 0; j < cmdl.geometry.surfaces[i].pos_indices.size(); j++)
-            {
-                Vertex v;
-                v.pos = cmdl.geometry.vertexCoords[cmdl.geometry.surfaces[i].pos_indices[j]];
-
-                v.texCoord = (
-                    cmdl.geometry.floatUVCoords.size() == 0
-                    ?
-                        glm::vec2(0, 0)
-                    :
-                        (cmdl.geometry.floatUVCoords[cmdl.geometry.surfaces[i].uvc_indices[j]])
-                    );
-                v.color = glm::vec3(0, 0, 0);
-                v.textureIndex = cmdl.materialSets[0].materials[cmdl.geometry.surfaces[i].matIndex].textureFileIndices[0];
-                m.vertices.push_back(v);
-                m.indices.push_back(a);
-                a++;
-            }
-        }
-        indices.insert(indices.end(), m.indices.begin(), m.indices.end());
-        vertices.insert(vertices.end(), m.vertices.begin(), m.vertices.end());
-
-        m.num_indices = indices.size() - m.startIndex;
-
-
-
-        objects.push_back(m);
-        /*
-        std::ofstream wf("GiantBoss.obj", std::ios::out | std::ios::binary);
-        
-        for (int i = 0; i < cmdl.geometry.vertexCoords.size(); i++) {
-            std::string ln = "v ";
-            ln += std::to_string(cmdl.geometry.vertexCoords[i].x);
-            ln += " ";
-            ln += std::to_string(cmdl.geometry.vertexCoords[i].y);
-            ln += " ";
-            ln += std::to_string(cmdl.geometry.vertexCoords[i].z);
-            ln += "\n";
-            wf.write(ln.data(), ln.length());
-        }
-        for (int i = 0; i < cmdl.geometry.floatUVCoords.size(); i++) {
-            std::string ln = "vt ";
-            ln += std::to_string(cmdl.geometry.floatUVCoords[i].x);
-            ln += " ";
-            ln += std::to_string(cmdl.geometry.floatUVCoords[i].y);
-            ln += "\n";
-            wf.write(ln.data(), ln.length());
-        }
-        for (int i = 0; i < cmdl.geometry.normals.size(); i++) {
-            std::string ln = "vn ";
-            ln += std::to_string(cmdl.geometry.normals[i].x);
-            ln += " ";
-            ln += std::to_string(cmdl.geometry.normals[i].y);
-            ln += " ";
-            ln += std::to_string(cmdl.geometry.normals[i].z);
-            ln += "\n";
-            wf.write(ln.data(), ln.length());
-        }
-        for(int x = 0;x<cmdl.geometry.surfaceCount;x++)
-        for (int i = 0; i < cmdl.geometry.surfaces[x].pos_indices.size(); i+=3)
-        {
-            std::string ln = "f ";
-            ln += std::to_string(cmdl.geometry.surfaces[x].pos_indices[i + 0]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].uvc_indices[i + 0]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].nml_indices[i + 0]+1)+ " ";
-            ln += std::to_string(cmdl.geometry.surfaces[x].pos_indices[i + 1]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].uvc_indices[i + 1]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].nml_indices[i + 1]+1)+ " ";
-            ln += std::to_string(cmdl.geometry.surfaces[x].pos_indices[i + 2]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].uvc_indices[i + 2]+1) + "/" + std::to_string(cmdl.geometry.surfaces[x].nml_indices[i + 2]+1)+ "\n";
-            wf.write(ln.data(), ln.length());
-        }
-        wf.close();
-        */
+        pushToScene(&cmdl);
+        pushToScene(loadCMDL(0x729EA8BA, "Metroid2.pak"));
     }
 
     void createVertexBuffer() {
@@ -1719,7 +1724,7 @@ private:
         // playerCharacter.cameraPos, 
         // playerCharacter.cameraPos+playerCharacter.cameraFront,
         // playerCharacter.cameraUp); 
-        ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 40.0f);
+        ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 70.0f);
         ubo.proj[1][1] *= -1;
 
         void* data;

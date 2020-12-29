@@ -9,45 +9,45 @@ C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(724,27): warning 
 C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(735,23): warning C4244: 'initializing': conversion from 'uint64_t' to 'int', possible loss of data
 C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(736,41): warning C4018: '<': signed/unsigned mismatch
 C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(740,29): warning C4244: 'initializing': conversion from 'uint64_t' to 'int', possible loss of data
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1162,23): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1202,23): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1237,23): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1275,27): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1294,27): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1312,27): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1326,27): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1334,31): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1355,31): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1360,167): warning C4244: 'argument': conversion from '_Ty' to 'unsigned long', possible loss of data
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1174,23): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1214,23): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1249,23): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1287,27): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1306,27): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1324,27): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1338,27): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1346,31): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1367,31): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1372,167): warning C4244: 'argument': conversion from '_Ty' to 'unsigned long', possible loss of data
           with
           [
               _Ty=float
           ]
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1360,103): warning C4244: '=': conversion from 'unsigned long' to '_Ty', possible loss of data
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1372,103): warning C4244: '=': conversion from 'unsigned long' to '_Ty', possible loss of data
           with
           [
               _Ty=float
           ]
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1392,23): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1415,23): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1433,23): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1458,23): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1496,23): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1507,23): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1520,27): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1530,27): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1598,27): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1609,33): warning C4244: '=': conversion from 'uint64_t' to 'uint32_t', possible loss of data
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1613,29): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1619,29): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1629,29): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1634,41): warning C4244: 'initializing': conversion from 'uint64_t' to 'uint32_t', possible loss of data
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1637,31): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1666,33): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1695,37): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1732,37): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1887,37): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1905,37): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1404,23): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1427,23): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1445,23): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1470,23): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1508,23): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1519,23): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1532,27): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1542,27): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1610,27): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1621,33): warning C4244: '=': conversion from 'uint64_t' to 'uint32_t', possible loss of data
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1625,29): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1631,29): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1641,29): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1646,41): warning C4244: 'initializing': conversion from 'uint64_t' to 'uint32_t', possible loss of data
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1649,31): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1678,33): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1707,37): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1744,37): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1899,37): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(1917,37): warning C4018: '<': signed/unsigned mismatch
 C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(30,1): warning C4103: alignment changed after including header, may be due to missing #pragma pack(pop)
 C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(101,97): warning C4244: '-=': conversion from 'double' to 'T', possible loss of data
           with
@@ -106,12 +106,10 @@ C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(342,63): warning C4244: 
           ]
 C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(734,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
 C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(965,191): warning C4101: 'texChannels': unreferenced local variable
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1317,24): warning C4018: '<': signed/unsigned mismatch
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1332,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1333,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1358,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1520,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1263,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1264,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1289,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1395,24): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1525,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
 C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(401): warning C4715: 'findAsset': not all control paths return a value
-x64\Debug\FileReader.obj : warning LNK4042: object specified more than once; extras ignored
-LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
   VkPrime.vcxproj -> C:\Users\yair\Documents\GitHub\VkPrime\x64\Debug\VkPrime.exe
