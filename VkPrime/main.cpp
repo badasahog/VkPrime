@@ -958,9 +958,10 @@ private:
         imageStuffs.resize(CMDLMap[tempCMDLID].materialSets[0].textureCount);
         for (int x = 0; x < imageStuffs.size(); x++)
         {
+            std::cout <<"line ["<< __LINE__ << "]: " << x << std::endl;
 
-            //unsigned char* pixels = (TXTRMap[CMDLMap[0x729EA8BA].materialSets[0].textureFileIDs[0]].PCpixels.data());
             unsigned char* pixels = (TXTRMap[CMDLMap[tempCMDLID].materialSets[0].textureFileIDs[x]].PCpixels.data());
+            //unsigned char* pixels = (TXTRMap[CMDLMap[tempCMDLID].materialSets[0].textureFileIDs[x]].PCpixels.data());
 
             int texWidth = TXTRMap[CMDLMap[tempCMDLID].materialSets[0].textureFileIDs[x]].imageWidth, texHeight = TXTRMap[CMDLMap[tempCMDLID].materialSets[0].textureFileIDs[x]].imageHeight, texChannels;
 
@@ -1272,7 +1273,7 @@ private:
                 v.texCoord = (
                     cmdl->geometry.floatUVCoords.size() == 0
                     ?
-                    glm::vec2(0, 0)
+                    glm::vec2(255, 255)
                     :
                     (cmdl->geometry.floatUVCoords[cmdl->geometry.surfaces[i].uvc_indices[j]])
                     );
@@ -1336,7 +1337,6 @@ private:
     }
     void loadScene()
     {
-        //loadPak("Metroid2.pak");
 
         //investigate cmdl: 0xEC81CD52
         //wasp: 0x729EA8BA (working)
@@ -1359,7 +1359,7 @@ private:
         //beetle: 0xB3574D33 (working)
         //wall eyeball: 0x9527B462 (working)
         //spore: 0x04A61D88 (working)
-        //puffy hand: 0xEDC82CFD (not working)
+        //puffy hand: 0xEDC82CFD (working)
         //lump: 0x469B71A0 (working)
         //egg: 0xC6D70851 (working)
         //small door: 0xE6C4B13E (not working)
@@ -1374,7 +1374,9 @@ private:
         //strg: 0x1A626AAC
         //STRG strg = *loadSTRG(0x1A626AAC, "Metroid2.pak");
 
-
+        //cinf: 0x81E65611
+        //anim: 0x8B3569CE
+        
         //shared:
         //crate: 0x2A1651CD
 
@@ -1388,17 +1390,17 @@ private:
         //giant monster: 0x07D51E01
         //tower: 0xD1BA6B82
         //tiny piece of phazon: 0x5F8D540D
+
+
         //MLVL mlvl = *loadMLVL(0x83F6FF6F, "Metroid2.pak");
-        tempCMDLID = 0x00576D37;// mlvl.defaultSkyboxID;
+        tempCMDLID = 0x729EA8BA;// mlvl.defaultSkyboxID;
         CMDL cmdl = *loadCMDL(tempCMDLID, "Metroid2.pak");
         imageStuffs.resize(cmdl.materialSets[0].textureCount);
         for(int i = 0;i<cmdl.materialSets[0].textureCount;i++)
             loadTXTR(cmdl.materialSets[0].textureFileIDs[i], "Metroid2.pak");
 
+        //MREA area = *loadMREA(0x3E6B2BB7, "Metroid2.pak");
 
-        //MREA area = *loadMREA(mlvl.areaArray[0].areaMREA_ID, "Metroid2.pak");
-        //MLVL mlvl = *loadMLVL(0x83F6FF6F, "Metroid2.pak");
-        //
         //loadSTRG(mlvl.worldNameID,"Metroid2.pak");
         //
         //for (int i = 0; i < mlvl.areaArray.size(); i++)
@@ -1406,7 +1408,6 @@ private:
         //    loadSTRG(mlvl.areaArray[i].areaNameID,"Metroid2.pak");
         //}
         pushToScene(&cmdl);
-        //pushToScene(loadCMDL(0x729EA8BA, "Metroid2.pak"));
     }
 
     void createVertexBuffer() {

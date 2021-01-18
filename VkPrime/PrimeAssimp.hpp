@@ -12,7 +12,7 @@
 #include <fstream>
 #include <zlib.h>
 #include "GXCore.hpp"
-#include "FileReader.hpp"
+#include "Filereader.hpp"
 
 
 typedef uint32_t PrimeAssetID;
@@ -320,6 +320,11 @@ std::vector<char> findAsset(PrimeAssetID assetID, std::string pakFile) {
     std::cout << "asset count (resource table)  " << assetCount_resourcesTable << std::endl;
     int32_t compressionFlag;
     char fourCC[4];
+    //char tester[4];
+    //tester[0] = 'A';
+    //tester[1] = 'N';
+    //tester[2] = 'I';
+    //tester[3] = 'M';
     PrimeAssetID AssetID;
     int32_t size;
     int32_t offset;
@@ -334,7 +339,9 @@ std::vector<char> findAsset(PrimeAssetID assetID, std::string pakFile) {
         AssetID = _byteswap_ulong(AssetID);
         size = _byteswap_ulong(size);
         offset = _byteswap_ulong(offset);
-        //std::cout.write(fourCC, 4) << "_" << std::hex << AssetID <<std::dec<< std::endl;
+        //if (fourCC[0] == tester[0] && fourCC[1] == tester[1] && fourCC[2] == tester[2] && fourCC[3] == tester[3]) {
+        //    std::cout.write(fourCC, 4) << "_" << std::hex << AssetID << std::dec << std::endl;
+        //}
     } while (AssetID != assetID);
     f.seekg(offset);
     if (compressionFlag == 1)
@@ -355,9 +362,7 @@ std::vector<char> findAsset(PrimeAssetID assetID, std::string pakFile) {
 
         switch (uncompress((Bytef*)rawFile.data(), &ucompSize, (Bytef*)zlibdata.data(), size))
         {
-#ifndef NDEBUG
         case Z_OK:std::cout << "successfully extracted" << std::endl; break;
-#endif
         case Z_STREAM_END:std::cout << "FATAL ERROR Z_STREAM_END" << std::endl; break;
         case Z_NEED_DICT:std::cout << "FATAL ERROR Z_NEED_DICT" << std::endl; break;
         case Z_ERRNO:std::cout << "FATAL ERROR Z_ERRNO" << std::endl; break;
@@ -527,13 +532,6 @@ void DecompressColourGCN(uint32_t texWidth, uint8_t* rgba, void const* block)
         }
 }
 
-
-
-
-
-
-
-
 void loadTXTR(std::vector<char> rawFile, PrimeAssetID AssetID)
 {
     TXTRMap[AssetID].imageFormat = 0xBAD0DADA;
@@ -576,7 +574,7 @@ void loadTXTR(std::vector<char> rawFile, PrimeAssetID AssetID)
     int imageSize = numblocks * blockSize;
 
     std::cout << "texel data size: " << (rawFile.size() - subGetLoc) / 32 << std::endl;
-    std::cout << "texel data size (predicted): " << imageSize / 32 << std::endl;
+    std::cout << "texel data size (without mipmaps): " << imageSize / 32 << std::endl;
 
     TXTRMap[AssetID].PCpixels.resize(TXTRMap[AssetID].imageWidth * TXTRMap[AssetID].imageHeight * 4);
 
@@ -590,26 +588,6 @@ void loadTXTR(std::vector<char> rawFile, PrimeAssetID AssetID)
             TXTRMap[AssetID].PCpixels[(TXTRMap[AssetID].imageWidth * y + x) * 4 + 3] = 0xff;
         }
     }
-
-    //now that everything is red, let's fill in the stuff we know
-    //uint16_t color565_1 = rawFile[subGetLoc++];
-    //uint16_t color565_2 = rawFile[subGetLoc++];
-    //
-    //unsigned color1_r = (color565_1 & 0xF800) >> 11;
-    //unsigned color1_g = (color565_1 & 0x07E0) >> 5;
-    //unsigned color1_b = (color565_1 & 0x001F);
-    //
-    //unsigned color2_r = (color565_2 & 0xF800) >> 11;
-    //unsigned color2_g = (color565_2 & 0x07E0) >> 5;
-    //unsigned color2_b = (color565_2 & 0x001F);
-    //
-    //color1_r = (color1_r * 255) / 31;
-    //color1_g = (color1_g * 255) / 63;
-    //color1_b = (color1_b * 255) / 31;
-    //
-    //color2_r = (color2_r * 255) / 31;
-    //color2_g = (color2_g * 255) / 63;
-    //color2_b = (color2_b * 255) / 31;
 
     for (int y = 0; y < TXTRMap[AssetID].imageHeight; y += 8)
     {
@@ -631,161 +609,552 @@ void loadTXTR(std::vector<char> rawFile, PrimeAssetID AssetID)
 
 
 }
-void loadGeometry(FileReader reader, MPGeometry* geometry, MaterialSet materialSet)
+void loadMaterialSet(FileReader* reader, MaterialSet* materialSet)
 {
-    /*
-    * resize the vector holding the vertex coords based on the size of that section. this will add some extra space because of the 32B padding
-    */
+    std::cout << "reading material data from " << std::hex << reader->getloc << std::dec << std::endl;
 
-    geometry->vertexCoords.resize(reader.getSectionSize() / (sizeof(float) * 3));
+
+    reader->readInt32(&materialSet->textureCount);
+    std::cout << "[" << std::hex << reader->getloc << std::dec << "] textures: " << materialSet->textureCount << std::endl;
+    materialSet->textureFileIDs.resize(materialSet->textureCount);
+
+    for (int tx = 0; tx < materialSet->textureCount; tx++) {
+        reader->readInt32(&materialSet->textureFileIDs[tx]);
+        std::cout << "texture used: " << std::hex << materialSet->textureFileIDs[tx] << std::dec << std::endl;
+    }
+
+
+    reader->readInt32(&(materialSet->materialCount));
+    std::cout << "[" << std::hex << reader->getloc << std::dec << " material count: " << materialSet->materialCount << std::endl;
+
+    materialSet->materialEndOffsets.resize(materialSet->materialCount);
+    for (int mc = 0; mc < materialSet->materialCount; mc++) {
+        reader->readInt32(&materialSet->materialEndOffsets[mc]);
+        std::cout << "material end offset: " << std::hex << materialSet->materialEndOffsets[mc] << std::dec << std::endl;
+    }
+
+    uint32_t materialStartingMarker = reader->getloc;
+
+    materialSet->materials.resize(materialSet->materialCount + 5);
+    for (int ijk = 0; ijk < materialSet->materialCount; ijk++)
+    {
+        uint32_t flags;
+        reader->readInt32(&flags);
+        std::cout << "[" << std::hex << reader->getloc << std::dec << "] ";
+        std::cout << "material properties:" << std::endl;
+        std::cout << "\tUnused, always set:                                " << ((flags & 0x01) > 0 ? "on" : "off") << std::endl;
+        std::cout << "\tUnused, always set:                                " << ((flags & 0x02) > 0 ? "on" : "off") << std::endl;
+        std::cout << "\tUnused, never set:                                 " << ((flags & 0x04) > 0 ? "on" : "off") << std::endl;
+        std::cout << "\tHas Konst values:                                  " << ((flags & 0x08) > 0 ? "on" : "off") << std::endl;
+        std::cout << "\tIs transparent:                                    " << ((flags & 0x10) > 0 ? "on" : "off") << std::endl;
+        std::cout << "\tMasked alpha:                                      " << ((flags & 0x20) > 0 ? "on" : "off") << std::endl;
+        std::cout << "\tEnable Samus's reflection:                         " << ((flags & 0x40) > 0 ? "on" : "off") << std::endl;
+        std::cout << "\tEnable Z-writes:                                   " << ((flags & 0x80) > 0 ? "on" : "off") << std::endl;
+        std::cout << "\tEnable Samus's reflection, using the eye position: " << ((flags & 0x100) > 0 ? "on" : "off") << std::endl;
+        std::cout << "\tShadow occluder mesh:                              " << ((flags & 0x200) > 0 ? "on" : "off") << std::endl;
+        std::cout << "\tEnable indirect texture stage for reflections:     " << ((flags & 0x400) > 0 ? "on" : "off") << std::endl;
+        std::cout << "\tIndicates a lightmap is present:                   " << ((flags & 0x800) > 0 ? "on" : "off") << std::endl;
+        std::cout << "\tUnused, always set:                                " << ((flags & 0x1000) > 0 ? "on" : "off") << std::endl;
+        std::cout << "\tEnable first UV coordinate to use short array:     " << ((flags & 0x2000) > 0 ? "on" : "off") << std::endl;
+        std::cout << "\tunused, never set:                                 " << ((flags & 0x4000) > 0 ? "on" : "off") << std::endl;
+        std::cout << "\tunused, never set:                                 " << ((flags & 0x8000) > 0 ? "on" : "off") << std::endl;
+        uint32_t TC;
+        reader->readInt32(&TC);
+        std::cout << "[" << std::hex << reader->getloc << std::dec << "] "<< "Texture Count: " << TC << std::endl;
+
+        while (TC > 120) {}//safety to prevent crahes
+        materialSet->materials[ijk].textureFileIndices.resize(TC);
+        std::cout << "textures:" << std::endl;
+        for (int tx = 0; tx < TC; tx++) {
+            reader->readInt32(&materialSet->materials[ijk].textureFileIndices[tx]);
+            std::cout << "\ttexture: " << std::hex << materialSet->textureFileIDs[materialSet->materials[ijk].textureFileIndices[tx]] << std::dec << std::endl;
+        }
+
+
+        reader->readInt32(&materialSet->materials[ijk].vertexAtributeFlags);
+        std::cout << "vertex atributes: " << std::endl;
+        std::cout << "\tPosition: " << ((materialSet->materials[ijk].vertexAtributeFlags & 0x000003) > 0 ? "1" : "0") << std::endl;
+        std::cout << "\tNormal:   " << ((materialSet->materials[ijk].vertexAtributeFlags & 0x00000C) > 0 ? "1" : "0") << std::endl;
+        std::cout << "\tColor 0:  " << ((materialSet->materials[ijk].vertexAtributeFlags & 0x000030) > 0 ? "1" : "0") << std::endl;
+        std::cout << "\tColor 1:  " << ((materialSet->materials[ijk].vertexAtributeFlags & 0x0000C0) > 0 ? "1" : "0") << std::endl;
+        std::cout << "\tTex 0:    " << ((materialSet->materials[ijk].vertexAtributeFlags & 0x000300) > 0 ? "1" : "0") << std::endl;
+        std::cout << "\tTex 1:    " << ((materialSet->materials[ijk].vertexAtributeFlags & 0x000C00) > 0 ? "1" : "0") << std::endl;
+        std::cout << "\tTex 2:    " << ((materialSet->materials[ijk].vertexAtributeFlags & 0x003000) > 0 ? "1" : "0") << std::endl;
+        std::cout << "\tTex 3:    " << ((materialSet->materials[ijk].vertexAtributeFlags & 0x00C000) > 0 ? "1" : "0") << std::endl;
+        std::cout << "\tTex 4:    " << ((materialSet->materials[ijk].vertexAtributeFlags & 0x030000) > 0 ? "1" : "0") << std::endl;
+        std::cout << "\tTex 5:    " << ((materialSet->materials[ijk].vertexAtributeFlags & 0x0C0000) > 0 ? "1" : "0") << std::endl;
+        std::cout << "\tTex 6:    " << ((materialSet->materials[ijk].vertexAtributeFlags & 0x300000) > 0 ? "1" : "0") << std::endl;
+        uint32_t groupIndex;
+        reader->readInt32(&groupIndex);
+        std::cout << "group index: " << groupIndex << std::endl;
+        if ((flags & 0x08) > 0)
+        {
+            uint32_t KonstCount;
+            reader->readInt32(&KonstCount);
+            std::cout << "KonstCount: " << KonstCount << std::endl;
+            materialSet->materials[ijk].konstColors.resize(KonstCount);
+
+            for (int mc = 0; mc < KonstCount; mc++) {
+                reader->readInt32(&materialSet->materials[ijk].konstColors[mc]);
+                std::cout << "konst color " << mc << ": " << std::hex << materialSet->materials[ijk].konstColors[mc] << std::dec << std::endl;
+
+            }
+        }
+
+
+
+        uint16_t blendDestFactor;
+        reader->readInt16(&blendDestFactor);
+        std::cout << "blendDestFactor: " << blendDestFactor << std::endl;
+
+        uint16_t blendSourceFactor;
+        reader->readInt16(&blendSourceFactor);
+        std::cout << "blendSourceFactor: " << blendSourceFactor << std::endl;
+
+        if ((flags & 0x400) != 0)
+        {
+            uint32_t reflectionIndirectTextureIndex;
+            reader->readInt32(&reflectionIndirectTextureIndex);
+            std::cout << "reflection Indirect Texture Index: " << reflectionIndirectTextureIndex << std::endl;
+        }
+
+
+        reader->readInt32(&materialSet->materials[ijk].ColorChannelCount);
+        std::cout << "color channel count: " << materialSet->materials[ijk].ColorChannelCount << std::endl;
+
+        reader->readInt32(&materialSet->materials[ijk].ColorChannelFlags);
+        std::cout << "color channel flags: " << materialSet->materials[ijk].ColorChannelFlags << std::dec << std::endl;
+
+
+
+        uint32_t TEVStageCount;
+        reader->readInt32(&TEVStageCount);
+        std::cout << "TEV Stage Count: " << TEVStageCount << std::endl;
+
+        for (int ijkl = 0; ijkl < TEVStageCount; ijkl++)
+        {
+            std::cout << std::hex << "[" << reader->getloc << "] TEV stage " << std::dec << ijkl << ": " << std::endl;
+            uint32_t colorInputFlags;
+            reader->readInt32(&colorInputFlags);
+            std::cout << "\tColor input flags (color0): ";
+            if ((colorInputFlags & 0x1f) == 0x0) std::cout << "Previous stage RGB" << std::endl;
+            else if ((colorInputFlags & 0x1f) == 0x1) std::cout << "Previous stage AAA" << std::endl;
+            else if ((colorInputFlags & 0x1f) == 0x2) std::cout << "Color 0 RGB" << std::endl;
+            else if ((colorInputFlags & 0x1f) == 0x3) std::cout << "Color 0 AAA" << std::endl;
+            else if ((colorInputFlags & 0x1f) == 0x4) std::cout << "Color 1 RGB" << std::endl;
+            else if ((colorInputFlags & 0x1f) == 0x5) std::cout << "Color 1 AAA" << std::endl;
+            else if ((colorInputFlags & 0x1f) == 0x6) std::cout << "Color 2 RGB" << std::endl;
+            else if ((colorInputFlags & 0x1f) == 0x7) std::cout << "Color 2 AAA" << std::endl;
+            else if ((colorInputFlags & 0x1f) == 0x8) std::cout << "Texture RGB" << std::endl;
+            else if ((colorInputFlags & 0x1f) == 0x9) std::cout << "Texture AAA" << std::endl;
+            else if ((colorInputFlags & 0x1f) == 0xa) std::cout << "Rasterized RGB" << std::endl;
+            else if ((colorInputFlags & 0x1f) == 0xb) std::cout << "Rasterized AAA" << std::endl;
+            else if ((colorInputFlags & 0x1f) == 0xc) std::cout << "One" << std::endl;
+            else if ((colorInputFlags & 0x1f) == 0xd) std::cout << "Half" << std::endl;
+            else if ((colorInputFlags & 0x1f) == 0xe) std::cout << "Konstant RGB" << std::endl;
+            else if ((colorInputFlags & 0x1f) == 0xf) std::cout << "Zero" << std::endl;
+
+            std::cout << "\tColor input flags (color1): ";
+            if (((colorInputFlags & 0x3E0) >> 5) == 0x0) std::cout << "Previous stage RGB" << std::endl;
+            else if (((colorInputFlags & 0x3E0) >> 5) == 0x1) std::cout << "Previous stage AAA" << std::endl;
+            else if (((colorInputFlags & 0x3E0) >> 5) == 0x2) std::cout << "Color 0 RGB" << std::endl;
+            else if (((colorInputFlags & 0x3E0) >> 5) == 0x3) std::cout << "Color 0 AAA" << std::endl;
+            else if (((colorInputFlags & 0x3E0) >> 5) == 0x4) std::cout << "Color 1 RGB" << std::endl;
+            else if (((colorInputFlags & 0x3E0) >> 5) == 0x5) std::cout << "Color 1 AAA" << std::endl;
+            else if (((colorInputFlags & 0x3E0) >> 5) == 0x6) std::cout << "Color 2 RGB" << std::endl;
+            else if (((colorInputFlags & 0x3E0) >> 5) == 0x7) std::cout << "Color 2 AAA" << std::endl;
+            else if (((colorInputFlags & 0x3E0) >> 5) == 0x8) std::cout << "Texture RGB" << std::endl;
+            else if (((colorInputFlags & 0x3E0) >> 5) == 0x9) std::cout << "Texture AAA" << std::endl;
+            else if (((colorInputFlags & 0x3E0) >> 5) == 0xa) std::cout << "Rasterized RGB" << std::endl;
+            else if (((colorInputFlags & 0x3E0) >> 5) == 0xb) std::cout << "Rasterized AAA" << std::endl;
+            else if (((colorInputFlags & 0x3E0) >> 5) == 0xc) std::cout << "One" << std::endl;
+            else if (((colorInputFlags & 0x3E0) >> 5) == 0xd) std::cout << "Half" << std::endl;
+            else if (((colorInputFlags & 0x3E0) >> 5) == 0xe) std::cout << "Konstant RGB" << std::endl;
+            else if (((colorInputFlags & 0x3E0) >> 5) == 0xf) std::cout << "Zero" << std::endl;
+
+            std::cout << "\tColor input flags (color2): ";
+            if (((colorInputFlags & 0x7C00) >> 10) == 0x0) std::cout << "Previous stage RGB" << std::endl;
+            else if (((colorInputFlags & 0x7C00) >> 10) == 0x1) std::cout << "Previous stage AAA" << std::endl;
+            else if (((colorInputFlags & 0x7C00) >> 10) == 0x2) std::cout << "Color 0 RGB" << std::endl;
+            else if (((colorInputFlags & 0x7C00) >> 10) == 0x3) std::cout << "Color 0 AAA" << std::endl;
+            else if (((colorInputFlags & 0x7C00) >> 10) == 0x4) std::cout << "Color 1 RGB" << std::endl;
+            else if (((colorInputFlags & 0x7C00) >> 10) == 0x5) std::cout << "Color 1 AAA" << std::endl;
+            else if (((colorInputFlags & 0x7C00) >> 10) == 0x6) std::cout << "Color 2 RGB" << std::endl;
+            else if (((colorInputFlags & 0x7C00) >> 10) == 0x7) std::cout << "Color 2 AAA" << std::endl;
+            else if (((colorInputFlags & 0x7C00) >> 10) == 0x8) std::cout << "Texture RGB" << std::endl;
+            else if (((colorInputFlags & 0x7C00) >> 10) == 0x9) std::cout << "Texture AAA" << std::endl;
+            else if (((colorInputFlags & 0x7C00) >> 10) == 0xa) std::cout << "Rasterized RGB" << std::endl;
+            else if (((colorInputFlags & 0x7C00) >> 10) == 0xb) std::cout << "Rasterized AAA" << std::endl;
+            else if (((colorInputFlags & 0x7C00) >> 10) == 0xc) std::cout << "One" << std::endl;
+            else if (((colorInputFlags & 0x7C00) >> 10) == 0xd) std::cout << "Half" << std::endl;
+            else if (((colorInputFlags & 0x7C00) >> 10) == 0xe) std::cout << "Konstant RGB" << std::endl;
+            else if (((colorInputFlags & 0x7C00) >> 10) == 0xf) std::cout << "Zero" << std::endl;
+
+            std::cout << "\tColor input flags (color3): ";
+            if (((colorInputFlags & 0xF8000) >> 15) == 0x0) std::cout << "Previous stage RGB" << std::endl;
+            else if (((colorInputFlags & 0xF8000) >> 15) == 0x1) std::cout << "Previous stage AAA" << std::endl;
+            else if (((colorInputFlags & 0xF8000) >> 15) == 0x2) std::cout << "Color 0 RGB" << std::endl;
+            else if (((colorInputFlags & 0xF8000) >> 15) == 0x3) std::cout << "Color 0 AAA" << std::endl;
+            else if (((colorInputFlags & 0xF8000) >> 15) == 0x4) std::cout << "Color 1 RGB" << std::endl;
+            else if (((colorInputFlags & 0xF8000) >> 15) == 0x5) std::cout << "Color 1 AAA" << std::endl;
+            else if (((colorInputFlags & 0xF8000) >> 15) == 0x6) std::cout << "Color 2 RGB" << std::endl;
+            else if (((colorInputFlags & 0xF8000) >> 15) == 0x7) std::cout << "Color 2 AAA" << std::endl;
+            else if (((colorInputFlags & 0xF8000) >> 15) == 0x8) std::cout << "Texture RGB" << std::endl;
+            else if (((colorInputFlags & 0xF8000) >> 15) == 0x9) std::cout << "Texture AAA" << std::endl;
+            else if (((colorInputFlags & 0xF8000) >> 15) == 0xa) std::cout << "Rasterized RGB" << std::endl;
+            else if (((colorInputFlags & 0xF8000) >> 15) == 0xb) std::cout << "Rasterized AAA" << std::endl;
+            else if (((colorInputFlags & 0xF8000) >> 15) == 0xc) std::cout << "One" << std::endl;
+            else if (((colorInputFlags & 0xF8000) >> 15) == 0xd) std::cout << "Half" << std::endl;
+            else if (((colorInputFlags & 0xF8000) >> 15) == 0xe) std::cout << "Konstant RGB" << std::endl;
+            else if (((colorInputFlags & 0xF8000) >> 15) == 0xf) std::cout << "Zero" << std::endl;
+
+
+
+            uint32_t alphaInputFlags;
+            reader->readInt32(&alphaInputFlags);
+            std::cout << "\tAlpha input flags (color0): ";
+            if ((alphaInputFlags & 0x1f) == 0x0) std::cout << "Previous stage alpha" << std::endl;
+            else if ((alphaInputFlags & 0x1f) == 0x1) std::cout << "Color 0 alpha" << std::endl;
+            else if ((alphaInputFlags & 0x1f) == 0x2) std::cout << "Color 1 alpha" << std::endl;
+            else if ((alphaInputFlags & 0x1f) == 0x3) std::cout << "Color 2 alpha" << std::endl;
+            else if ((alphaInputFlags & 0x1f) == 0x4) std::cout << "Texture alpha" << std::endl;
+            else if ((alphaInputFlags & 0x1f) == 0x5) std::cout << "Rasterized alpha" << std::endl;
+            else if ((alphaInputFlags & 0x1f) == 0x6) std::cout << "Konstant alpha" << std::endl;
+            else if ((alphaInputFlags & 0x1f) == 0x7) std::cout << "Zero" << std::endl;
+
+            std::cout << "\tAlpha input flags (color1): ";
+            if (((alphaInputFlags & 0x3E0) >> 5) == 0x0) std::cout << "Previous stage alpha" << std::endl;
+            else if (((alphaInputFlags & 0x3E0) >> 5) == 0x1) std::cout << "Color 0 alpha" << std::endl;
+            else if (((alphaInputFlags & 0x3E0) >> 5) == 0x2) std::cout << "Color 1 alpha" << std::endl;
+            else if (((alphaInputFlags & 0x3E0) >> 5) == 0x3) std::cout << "Color 2 alpha" << std::endl;
+            else if (((alphaInputFlags & 0x3E0) >> 5) == 0x4) std::cout << "Texture alpha" << std::endl;
+            else if (((alphaInputFlags & 0x3E0) >> 5) == 0x5) std::cout << "Rasterized alpha" << std::endl;
+            else if (((alphaInputFlags & 0x3E0) >> 5) == 0x6) std::cout << "Konstant alpha" << std::endl;
+            else if (((alphaInputFlags & 0x3E0) >> 5) == 0x7) std::cout << "Zero" << std::endl;
+
+            std::cout << "\tAlpha input flags (color2): ";
+            if (((alphaInputFlags & 0x7C00) >> 10) == 0x0) std::cout << "Previous stage alpha" << std::endl;
+            else if (((alphaInputFlags & 0x7C00) >> 10) == 0x1) std::cout << "Color 0 alpha" << std::endl;
+            else if (((alphaInputFlags & 0x7C00) >> 10) == 0x2) std::cout << "Color 1 alpha" << std::endl;
+            else if (((alphaInputFlags & 0x7C00) >> 10) == 0x3) std::cout << "Color 2 alpha" << std::endl;
+            else if (((alphaInputFlags & 0x7C00) >> 10) == 0x4) std::cout << "Texture alpha" << std::endl;
+            else if (((alphaInputFlags & 0x7C00) >> 10) == 0x5) std::cout << "Rasterized alpha" << std::endl;
+            else if (((alphaInputFlags & 0x7C00) >> 10) == 0x6) std::cout << "Konstant alpha" << std::endl;
+            else if (((alphaInputFlags & 0x7C00) >> 10) == 0x7) std::cout << "Zero" << std::endl;
+
+            std::cout << "\tAlpha input flags (color3): ";
+            if (((alphaInputFlags & 0xF8000) >> 15) == 0x0) std::cout << "Previous stage alpha" << std::endl;
+            else if (((alphaInputFlags & 0xF8000) >> 15) == 0x1) std::cout << "Color 0 alpha" << std::endl;
+            else if (((alphaInputFlags & 0xF8000) >> 15) == 0x2) std::cout << "Color 1 alpha" << std::endl;
+            else if (((alphaInputFlags & 0xF8000) >> 15) == 0x3) std::cout << "Color 2 alpha" << std::endl;
+            else if (((alphaInputFlags & 0xF8000) >> 15) == 0x4) std::cout << "Texture alpha" << std::endl;
+            else if (((alphaInputFlags & 0xF8000) >> 15) == 0x5) std::cout << "Rasterized alpha" << std::endl;
+            else if (((alphaInputFlags & 0xF8000) >> 15) == 0x6) std::cout << "Konstant alpha" << std::endl;
+            else if (((alphaInputFlags & 0xF8000) >> 15) == 0x7) std::cout << "Zero" << std::endl;
+
+            uint32_t colorCombineFlags;
+            reader->readInt32(&colorCombineFlags);
+            std::cout << "\tcolor combine flags: " << std::endl;
+            std::cout << "\tCombiner operator:   " << ((colorCombineFlags & 0x0000000F) >> 0) << std::endl;
+            std::cout << "\tBias:                " << ((colorCombineFlags & 0x00000030) >> 4) << std::endl;
+            std::cout << "\tScale:               " << ((colorCombineFlags & 0x000000C0) >> 6) << std::endl;
+            std::cout << "\tClamp flag:          " << ((colorCombineFlags & 0x00000100) >> 8) << std::endl;
+            std::cout << "\tOutput register:     " << ((colorCombineFlags & 0x00000600) >> 9) << std::endl;
+            std::cout << "\tUnused:              " << ((colorCombineFlags & 0xFFFFF800) >> 11) << std::endl;
+
+            uint32_t alphaCombineFlags;
+            reader->readInt32(&alphaCombineFlags);
+            std::cout << "\talpha combine flags: " << std::endl;
+            std::cout << "\tCombiner operator:   " << ((alphaCombineFlags & 0x0000000F) >> 0) << std::endl;
+            std::cout << "\tBias:                " << ((alphaCombineFlags & 0x00000030) >> 4) << std::endl;
+            std::cout << "\tScale:               " << ((alphaCombineFlags & 0x000000C0) >> 6) << std::endl;
+            std::cout << "\tClamp flag:          " << ((alphaCombineFlags & 0x00000100) >> 8) << std::endl;
+            std::cout << "\tOutput register:     " << ((alphaCombineFlags & 0x00000600) >> 9) << std::endl;
+            std::cout << "\tUnused:              " << ((alphaCombineFlags & 0xFFFFF800) >> 11) << std::endl;
+
+
+
+            uint8_t padding;
+            reader->readInt8(&padding);
+
+            uint8_t konstAlphaInput;
+            reader->readInt8(&konstAlphaInput);
+
+            uint8_t konstColorInput;
+            reader->readInt8(&konstColorInput);
+
+            uint8_t rasterizedColorInput;
+            reader->readInt8(&rasterizedColorInput);
+        }
+        for (int ijkl = 0; ijkl < TEVStageCount; ijkl++)
+        {
+            uint16_t padding;
+            reader->readInt16(&padding);
+
+            uint8_t textureTEVInput;
+            reader->readInt8(&textureTEVInput);
+            std::cout << "texture TEV Input: " << (uint32_t)textureTEVInput << std::endl;
+
+            uint8_t texCoordTEVInput;
+            reader->readInt8(&texCoordTEVInput);
+            std::cout << "texture coord TEV Input: " << (uint32_t)texCoordTEVInput << std::endl;
+        }
+
+        uint32_t texGenCount;
+        reader->readInt32(&texGenCount);
+        std::cout << "texGen Count: " << texGenCount << std::endl;
+
+        for (int ijkl = 0; ijkl < texGenCount; ijkl++)
+        {
+            uint32_t texGenFlag;
+            reader->readInt32(&texGenFlag);
+            std::cout << "texGen flag " << ijkl << ": " << std::endl;
+            std::cout << "\ttexCoord gen type: ";
+            switch (ijkl & 0xF)
+            {
+            case GX_TG_BUMP0:   std::cout << "GX_TG_BUMP0" << std::endl; break;
+            case GX_TG_BUMP1:   std::cout << "GX_TG_BUMP1" << std::endl; break;
+            case GX_TG_BUMP2:   std::cout << "GX_TG_BUMP2" << std::endl; break;
+            case GX_TG_BUMP3:   std::cout << "GX_TG_BUMP3" << std::endl; break;
+            case GX_TG_BUMP4:   std::cout << "GX_TG_BUMP4" << std::endl; break;
+            case GX_TG_BUMP5:   std::cout << "GX_TG_BUMP5" << std::endl; break;
+            case GX_TG_BUMP6:   std::cout << "GX_TG_BUMP6" << std::endl; break;
+            case GX_TG_BUMP7:   std::cout << "GX_TG_BUMP7" << std::endl; break;
+            case GX_TG_MTX2x4:  std::cout << "GX_TG_MTX2x4" << std::endl; break;
+            case GX_TG_MTX3x4:  std::cout << "GX_TG_MTX3x4" << std::endl; break;
+            case GX_TG_SRTG:    std::cout << "GX_TG_SRTG" << std::endl; break;
+            }
+            std::cout << "\ttexCoord src: ";
+            switch ((ijkl & 0x1F0) >> 4)
+            {
+            case GX_TG_BINRM: std::cout << "GX_TG_BINRM     " << std::endl; break;
+            case GX_TG_COLOR0: std::cout << "GX_TG_COLOR0    " << std::endl; break;
+            case GX_TG_COLOR1: std::cout << "GX_TG_COLOR1    " << std::endl; break;
+            case GX_TG_NRM: std::cout << "GX_TG_NRM       " << std::endl; break;
+            case GX_TG_POS: std::cout << "GX_TG_POS       " << std::endl; break;
+            case GX_TG_TANGENT: std::cout << "GX_TG_TANGENT   " << std::endl; break;
+            case GX_TG_TEX0: std::cout << "GX_TG_TEX0      " << std::endl; break;
+            case GX_TG_TEX1: std::cout << "GX_TG_TEX1      " << std::endl; break;
+            case GX_TG_TEX2: std::cout << "GX_TG_TEX2      " << std::endl; break;
+            case GX_TG_TEX3: std::cout << "GX_TG_TEX3      " << std::endl; break;
+            case GX_TG_TEX4: std::cout << "GX_TG_TEX4      " << std::endl; break;
+            case GX_TG_TEX5: std::cout << "GX_TG_TEX5      " << std::endl; break;
+            case GX_TG_TEX6: std::cout << "GX_TG_TEX6      " << std::endl; break;
+            case GX_TG_TEX7: std::cout << "GX_TG_TEX7      " << std::endl; break;
+            case GX_TG_TEXCOORD0: std::cout << "GX_TG_TEXCOORD0 " << std::endl; break;
+            case GX_TG_TEXCOORD1: std::cout << "GX_TG_TEXCOORD1 " << std::endl; break;
+            case GX_TG_TEXCOORD2: std::cout << "GX_TG_TEXCOORD2 " << std::endl; break;
+            case GX_TG_TEXCOORD3: std::cout << "GX_TG_TEXCOORD3 " << std::endl; break;
+            case GX_TG_TEXCOORD4: std::cout << "GX_TG_TEXCOORD4 " << std::endl; break;
+            case GX_TG_TEXCOORD5: std::cout << "GX_TG_TEXCOORD5 " << std::endl; break;
+            case GX_TG_TEXCOORD6: std::cout << "GX_TG_TEXCOORD6 " << std::endl; break;
+            }
+            std::cout << "\ttex matrix index: ";
+            switch (((ijkl & 0x3E00) >> 9) + 30)
+            {
+            case GX_IDENTITY: std::cout << "GX_IDENTITY" << std::endl; break;
+            case GX_TEXMTX0: std::cout << "GX_TEXMTX0 " << std::endl; break;
+            case GX_TEXMTX1: std::cout << "GX_TEXMTX1 " << std::endl; break;
+            case GX_TEXMTX2: std::cout << "GX_TEXMTX2 " << std::endl; break;
+            case GX_TEXMTX3: std::cout << "GX_TEXMTX3 " << std::endl; break;
+            case GX_TEXMTX4: std::cout << "GX_TEXMTX4 " << std::endl; break;
+            case GX_TEXMTX5: std::cout << "GX_TEXMTX5 " << std::endl; break;
+            case GX_TEXMTX6: std::cout << "GX_TEXMTX6 " << std::endl; break;
+            case GX_TEXMTX7: std::cout << "GX_TEXMTX7 " << std::endl; break;
+            case GX_TEXMTX8: std::cout << "GX_TEXMTX8 " << std::endl; break;
+            case GX_TEXMTX9: std::cout << "GX_TEXMTX9 " << std::endl; break;
+            }
+            std::cout << "\tnormalize flag: " << ((ijkl & 0x4000) > 0 ? "on" : "off") << std::endl;
+            std::cout << "\tpost transform tex matrix index: ";
+            switch (((ijkl & 0x1F8000) >> 15) + 64)
+            {
+            case GX_DTTIDENTITY: std::cout << "GX_DTTIDENTITY" << std::endl; break;
+            case GX_DTTMTX0: std::cout << "GX_DTTMTX0    " << std::endl; break;
+            case GX_DTTMTX1: std::cout << "GX_DTTMTX1    " << std::endl; break;
+            case GX_DTTMTX10: std::cout << "GX_DTTMTX10   " << std::endl; break;
+            case GX_DTTMTX11: std::cout << "GX_DTTMTX11   " << std::endl; break;
+            case GX_DTTMTX12: std::cout << "GX_DTTMTX12   " << std::endl; break;
+            case GX_DTTMTX13: std::cout << "GX_DTTMTX13   " << std::endl; break;
+            case GX_DTTMTX14: std::cout << "GX_DTTMTX14   " << std::endl; break;
+            case GX_DTTMTX15: std::cout << "GX_DTTMTX15   " << std::endl; break;
+            case GX_DTTMTX16: std::cout << "GX_DTTMTX16   " << std::endl; break;
+            case GX_DTTMTX17: std::cout << "GX_DTTMTX17   " << std::endl; break;
+            case GX_DTTMTX18: std::cout << "GX_DTTMTX18   " << std::endl; break;
+            case GX_DTTMTX19: std::cout << "GX_DTTMTX19   " << std::endl; break;
+            case GX_DTTMTX2: std::cout << "GX_DTTMTX2    " << std::endl; break;
+            case GX_DTTMTX3: std::cout << "GX_DTTMTX3    " << std::endl; break;
+            case GX_DTTMTX4: std::cout << "GX_DTTMTX4    " << std::endl; break;
+            case GX_DTTMTX5: std::cout << "GX_DTTMTX5    " << std::endl; break;
+            case GX_DTTMTX6: std::cout << "GX_DTTMTX6    " << std::endl; break;
+            case GX_DTTMTX7: std::cout << "GX_DTTMTX7    " << std::endl; break;
+            case GX_DTTMTX8: std::cout << "GX_DTTMTX8    " << std::endl; break;
+            case GX_DTTMTX9: std::cout << "GX_DTTMTX9    " << std::endl; break;
+            }
+        }
+
+        reader->getloc = materialStartingMarker + materialSet->materialEndOffsets[ijk];
+
+    }
+    //upperGetLoc += CMDLMap[AssetID].dataSectionSizes[imat];
+    //subGetLoc = upperGetLoc;
+    reader->toNextSection();
+}
+void loadGeometry(FileReader* reader, MPGeometry* geometry, MaterialSet materialSet, bool halfPrecisionNormals, bool halfPrecisionUVs)
+{
+    std::cout << "current section: " << reader->sectionIndex << std::endl;
+    std::cout << "current section size: " << reader->getSectionSize() << std::endl;
+    //resize the vector holding the vertex coords based on the size of that section. this will add some extra space because of the 32B padding
+
+    //for (int i = 0; i < 20; i++)
+    //{
+    //    std::cout << "section " << i << " size: " << reader->sectionSizes[i] << std::endl;
+    //}
+    //std::cout << "section index is: " << reader->sectionIndex << std::endl;
+
+    geometry->vertexCoords.resize(reader->getSectionSize() / (sizeof(float) * 3));
 
     std::cout << "number of vert coords: " << geometry->vertexCoords.size() << std::endl;
     for (int i = 0; i < geometry->vertexCoords.size(); i++)
     {
-        reader.readFloat(&geometry->vertexCoords[i].x);
-        reader.readFloat(&geometry->vertexCoords[i].y);
-        reader.readFloat(&geometry->vertexCoords[i].z);
+        reader->readFloat(&geometry->vertexCoords[i].x);
+        reader->readFloat(&geometry->vertexCoords[i].y);
+        reader->readFloat(&geometry->vertexCoords[i].z);
 
     }
 
-    //upperGetLoc += CMDLMap[AssetID].dataSectionSizes[CMDLMap[AssetID].MaterialSetCount];
-    //subGetLoc = upperGetLoc;
-    reader.toNextSection();
-    bool halfPrecisionNormals = false;//TEMP!
-    if (halfPrecisionNormals) 
+    reader->toNextSection();
+    if (halfPrecisionNormals)
     {
-        geometry->normals.resize(reader.getSectionSize() / (sizeof(short) * 3));
+        geometry->normals.resize(reader->getSectionSize() / (sizeof(short) * 3));
     }
     else
     {
-        geometry->normals.resize(reader.getSectionSize() / (sizeof(float) * 3));
+        geometry->normals.resize(reader->getSectionSize() / (sizeof(float) * 3));
 
     }
 
+    std::cout << "current section: " << reader->sectionIndex << std::endl;
+    std::cout << "current section size: " << reader->getSectionSize() << std::endl;
     std::cout << "number of normal coords: " << geometry->normals.size() << std::endl;
 
     if (halfPrecisionNormals) {
         uint16_t temp1, temp2, temp3;
         for (int ijk = 0; ijk < geometry->normals.size(); ijk++)
         {
-            reader.readInt16(&temp1);
-            reader.readInt16(&temp2);
-            reader.readInt16(&temp3);
+            reader->readInt16(&temp1);
+            reader->readInt16(&temp2);
+            reader->readInt16(&temp3);
+            geometry->normals[ijk].x = temp1 / 0x8000;
+            geometry->normals[ijk].y = temp2 / 0x8000;
+            geometry->normals[ijk].z = temp3 / 0x8000;
         }
     }
     else
     {
         for (int ijk = 0; ijk < geometry->normals.size(); ijk++)
         {
-            reader.readFloat(&geometry->normals[ijk].x);
-            reader.readFloat(&geometry->normals[ijk].y);
-            reader.readFloat(&geometry->normals[ijk].z);
+            reader->readFloat(&geometry->normals[ijk].x);
+            reader->readFloat(&geometry->normals[ijk].y);
+            reader->readFloat(&geometry->normals[ijk].z);
         }
     }
-    reader.toNextSection();
-
-    std::cout << std::hex << "[" << reader.getloc << " :: " << reader.getloc << "]" << std::dec << "skipping color data" << std::endl;
+    reader->toNextSection();
+    
+    std::cout << std::hex << "[" << reader->getloc << " :: " << reader->getloc << "]" << std::dec << "skipping color data" << std::endl;
 
     //no need to read color data, it's all empty
-    reader.toNextSection();
+    reader->toNextSection();
+    //std::cout <<__LINE__ << " " << reader->getSectionSize() << std::endl;
+    geometry->floatUVCoords.resize(reader->getSectionSize() / (sizeof(float)*2));
 
-    geometry->floatUVCoords.resize(reader.getSectionSize() / (sizeof(float) * 2));
-
+    std::cout << "current section: " << reader->sectionIndex << std::endl;
+    std::cout << "current section size: " << reader->getSectionSize() << std::endl;
     std::cout << "number of float UV coords: " << geometry->floatUVCoords.size() << std::endl;
 
     for (int ijk = 0; ijk < geometry->floatUVCoords.size(); ijk++)
     {
-        reader.readFloat(&geometry->floatUVCoords[ijk].x);
-        reader.readFloat(&geometry->floatUVCoords[ijk].y);
+        reader->readFloat(&geometry->floatUVCoords[ijk].x);
+        reader->readFloat(&geometry->floatUVCoords[ijk].y);
     }
-    reader.toNextSection();
+    reader->toNextSection();
 
 
 
-    geometry->shortUVCoords.resize(reader.getSectionSize() / (sizeof(short) * 2));
+    geometry->shortUVCoords.resize(reader->getSectionSize() / (sizeof(short) * 2));
 
     std::cout << "number of short UV coords: " << geometry->shortUVCoords.size() << std::endl;
 
     for (int ijk = 0; ijk < geometry->shortUVCoords.size(); ijk++)
     {
-        reader.readInt16((uint16_t*)&geometry->shortUVCoords[ijk].x);
-        reader.readInt16((uint16_t*)&geometry->shortUVCoords[ijk].y);
+        reader->readInt16((uint16_t*)&geometry->shortUVCoords[ijk].x);
+        reader->readInt16((uint16_t*)&geometry->shortUVCoords[ijk].y);
     }
 
-    reader.toNextSection();
+    reader->toNextSection();
 
-    std::cout << std::hex << "[" << reader.getloc << " :: " << reader.getloc << "]" << std::dec << "reading header data" << std::endl;
+    std::cout << std::hex << "[" << reader->getloc << " :: " << reader->getloc << "]" << std::dec << "reading header data" << std::endl;
     //the moment of truth:
-    reader.readInt32(&geometry->surfaceCount);
-    std::cout << std::hex << "[" << (reader.getloc - sizeof(geometry->surfaceCount)) << " :: " << (reader.getloc) << "] surface count:" << geometry->surfaceCount << std::dec << std::endl;
+    reader->readInt32(&geometry->surfaceCount);
+    std::cout << std::hex << "[" << (reader->getloc - sizeof(geometry->surfaceCount)) << " :: " << (reader->getloc) << "] surface count:" << geometry->surfaceCount << std::dec << std::endl;
 
     geometry->surfaceOffsets.resize(geometry->surfaceCount);
 
     for (int ijk = 0; ijk < geometry->surfaceCount; ijk++)
     {
-        reader.readInt32(&geometry->surfaceOffsets[ijk]);
-        std::cout << "[" << (reader.getloc - sizeof(uint32_t)) << " :: " << (reader.getloc) << "] surface offset " << ijk << ": " << std::hex << geometry->surfaceOffsets[ijk] << std::dec << std::endl;
+        reader->readInt32(&geometry->surfaceOffsets[ijk]);
+        std::cout << "[" << (reader->getloc - sizeof(uint32_t)) << " :: " << (reader->getloc) << "] surface offset " << ijk << ": " << std::hex << geometry->surfaceOffsets[ijk] << std::dec << std::endl;
     }
-    geometry->surfaceOffsets.push_back(reader.getSectionSize());
+    geometry->surfaceOffsets.push_back(reader->getSectionSize());
     //that's the end of this section, on to the next one
-    reader.toNextSection();
     geometry->surfaces.resize(geometry->surfaceCount);
     _CrtDumpMemoryLeaks();
     //loop through each surface
-    int surfaceAnchor = reader.getloc;
     for (int surfaceNum = 0; surfaceNum < geometry->surfaceCount; surfaceNum++)
     {
+        reader->toNextSection();
         MPSurface* surface = &geometry->surfaces[surfaceNum];
         surface->clearAll();
-        int surfaceStartLoc = reader.getloc;
+        int surfaceStartLoc = reader->getloc;
         for (int i = 0; i < 3; i++)
         {
-            reader.readFloat(&surface->centerPoint[i]);
+            reader->readFloat(&surface->centerPoint[i]);
         }
         std::cout << "center point: " << surface->centerPoint[0] << ", " << surface->centerPoint[1] << ", " << surface->centerPoint[2] << std::endl;
 
-        reader.readInt32(&(surface->matIndex));
-        std::cout << std::hex << "[" << (reader.getloc - sizeof(surface->matIndex)) << " :: " << (reader.getloc) << "] matIndex:" << surface->matIndex << std::dec << std::endl;
+        reader->readInt32(&(surface->matIndex));
+        std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->matIndex)) << " :: " << (reader->getloc) << "] matIndex:" << surface->matIndex << std::dec << std::endl;
 
-        reader.readInt16(&(surface->mantissa));
-        std::cout << std::hex << "[" << (reader.getloc - sizeof(surface->mantissa)) << " :: " << (reader.getloc) << "] mantissa:" << surface->mantissa << std::dec << std::endl;
+        reader->readInt16(&(surface->mantissa));
+        std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->mantissa)) << " :: " << (reader->getloc) << "] mantissa:" << surface->mantissa << std::dec << std::endl;
 
-        reader.readInt16(&(surface->displayListSize));
-        std::cout << std::hex << "[" << (reader.getloc - sizeof(surface->displayListSize)) << " :: " << (reader.getloc) << "] displayListSize:" << surface->displayListSize << std::dec << std::endl;
+        reader->readInt16(&(surface->displayListSize));
+        std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->displayListSize)) << " :: " << (reader->getloc) << "] displayListSize:" << surface->displayListSize << std::dec << std::endl;
 
-        reader.readInt32(&(surface->parentModelPointer));
-        std::cout << std::hex << "[" << (reader.getloc - sizeof(surface->parentModelPointer)) << " :: " << (reader.getloc) << "] parentModelPointer:" << surface->parentModelPointer << std::dec << std::endl;
+        reader->readInt32(&(surface->parentModelPointer));
+        std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->parentModelPointer)) << " :: " << (reader->getloc) << "] parentModelPointer:" << surface->parentModelPointer << std::dec << std::endl;
 
-        reader.readInt32(&(surface->nextSurfacePointer));
-        std::cout << std::hex << "[" << (reader.getloc - sizeof(surface->nextSurfacePointer)) << " :: " << (reader.getloc) << "] nextSurfacePointer:" << surface->nextSurfacePointer << std::dec << std::endl;
+        reader->readInt32(&(surface->nextSurfacePointer));
+        std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->nextSurfacePointer)) << " :: " << (reader->getloc) << "] nextSurfacePointer:" << surface->nextSurfacePointer << std::dec << std::endl;
 
-        reader.readInt32(&(surface->extraDataSize));
-        std::cout << std::hex << "[" << (reader.getloc - sizeof(surface->extraDataSize)) << " :: " << (reader.getloc) << "] extraDataSize:" << surface->extraDataSize << std::dec << std::endl;
+        reader->readInt32(&(surface->extraDataSize));
+        std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->extraDataSize)) << " :: " << (reader->getloc) << "] extraDataSize:" << surface->extraDataSize << std::dec << std::endl;
 
-        //TODO: what was this for?
-        //surface->surfaces.resize(CMDLMap[AssetID].geometry.surfaceCount);
 
         for (int ijk = 0; ijk < 3; ijk++)
         {
-            reader.readFloat(&surface->surfaceNormal[ijk]);
+            reader->readFloat(&surface->surfaceNormal[ijk]);
         }
         std::cout << "surface normal: " << surface->surfaceNormal[0] << ", " << surface->surfaceNormal[1] << ", " << surface->surfaceNormal[2] << std::endl;
 
 
 
-        reader.getloc += surface->extraDataSize;
+        reader->getloc += surface->extraDataSize;
 
         //align get location to 32 bytes before reading primatives
-        reader.seekBoundary32();
+        reader->seekBoundary32();
 
-
-
-        //char a = -58;
-        //std::cout << "a = " << std::bitset<8>(GXFlags) << std::endl;
-        //the second one will have 73
-        //todo: read until the gx flag hits zero or it hits the end of the section
-        reader.readInt8(&surface->GXFlags);
-        //std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(GXFlags)) << "] GXFlags:" << GXFlags << std::dec << std::endl;
+        reader->readInt8(&surface->GXFlags);
+        //std::cout << std::hex << "[" << reader->getloc << " :: " << (reader->getloc + sizeof(GXFlags)) << "] GXFlags:" << GXFlags << std::dec << std::endl;
 
         while (surface->GXFlags > 0)
         {
@@ -822,12 +1191,8 @@ void loadGeometry(FileReader reader, MPGeometry* geometry, MaterialSet materialS
                 std::cout << "Triangle Fan" << std::endl;
                 break;
             }
-            reader.readInt16(&surface->vertexCount);
-            std::cout << std::hex << "[" << (reader.getloc - sizeof(surface->vertexCount)) << " :: " << (reader.getloc) << "] vertex count:" << std::dec << surface->vertexCount << std::dec << std::endl;
-
-            //surface->pos_indices.resize(surface->pos_indices.size() + surface->vertexCount);
-            //surface->nml_indices.resize(surface->nml_indices.size() + surface->vertexCount);
-            //surface->uvc_indices.resize(surface->uvc_indices.size() + surface->vertexCount);
+            reader->readInt16(&surface->vertexCount);
+            std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->vertexCount)) << " :: " << (reader->getloc) << "] vertex count:" << std::dec << surface->vertexCount << std::dec << std::endl;
 
             uint16_t pos_index1before = 0;
             uint16_t pos_index2before = 0;
@@ -882,37 +1247,37 @@ void loadGeometry(FileReader reader, MPGeometry* geometry, MaterialSet materialS
 
 
                 if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0x3) > 0) {
-                    reader.readInt16(&pos_vIndex);
+                    reader->readInt16(&pos_vIndex);
                 }
                 if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0xC) > 0) {
-                    reader.readInt16(&nml_vIndex);
+                    reader->readInt16(&nml_vIndex);
                 }
                 if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0x300) > 0) {
-                    reader.readInt16(&uvc1_vIndex);
+                    reader->readInt16(&uvc1_vIndex);
                 }
                 if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0xC00) > 0)
                 {
-                    reader.readInt16(&uvc2_vIndex);
+                    reader->readInt16(&uvc2_vIndex);
                 }
                 if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0x3000) > 0)
                 {
-                    reader.readInt16(&uvc3_vIndex);
+                    reader->readInt16(&uvc3_vIndex);
                 }
                 if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0xC000) > 0)
                 {
-                    reader.readInt16(&uvc4_vIndex);
+                    reader->readInt16(&uvc4_vIndex);
                 }
                 if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0x30000) > 0)
                 {
-                    reader.readInt16(&uvc5_vIndex);
+                    reader->readInt16(&uvc5_vIndex);
                 }
                 if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0xC0000) > 0)
                 {
-                    reader.readInt16(&uvc6_vIndex);
+                    reader->readInt16(&uvc6_vIndex);
                 }
                 if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0x300000) > 0)
                 {
-                    reader.readInt16(&uvc7_vIndex);
+                    reader->readInt16(&uvc7_vIndex);
                 }
                 if (ijk == 0) {
                     pos_indexwaybefore = pos_vIndex;
@@ -1079,47 +1444,35 @@ void loadGeometry(FileReader reader, MPGeometry* geometry, MaterialSet materialS
             //0x30000   texture 4
             //0xC0000   texture 5
             //0x30000   texture 6
-            //std::cout << (CMDLMap[AssetID].geometry.surfaceOffsets[surfaceNum]) - (subGetLoc - upperGetLoc) << std::endl;
-            //break;
-            //if the amount of data left to read for this surface is less than one byte, go to the next surface
-            /*
-            * find: the amount left to the current surface
-            * 
-            * data I have:
-            * current location
-            * location where the surfaces started
-            * location where the current surface started
-            * location where each surface starts
-            */
-            //TODO: calculate display list size without the file's built in one
-            if (reader.getloc - surfaceStartLoc + 5 > reader.getSectionSize()) {
-            //if (reader.getloc - surfaceStartLoc + 5 > geometry->surfaceOffsets[surfaceNum+1] - geometry->surfaceOffsets[surfaceNum]) {
+
+            if (reader->getloc - surfaceStartLoc + 2 > reader->getSectionSize()) {
 
                 std::cout << __LINE__ << " hit end of display list" << std::endl;
-                //TODO: still needs to jump to the start of the next section!
 
-                //reader.getloc = surfaceAnchor + geometry->surfaceOffsets[surfaceNum];
-                reader.toNextSection();
-                //return;
+                //reader->toNextSection();
                 break;
 
             }
 
-            reader.readInt8(&surface->GXFlags);
+            reader->readInt8(&surface->GXFlags);
 
             if (surface->GXFlags == 0)
             {
                 std::cout << __LINE__ << " GXFlags hit 0" << std::endl;
-                //reader.getloc = surfaceAnchor + geometry->surfaceOffsets[surfaceNum];
-                reader.toNextSection();
+
+                //reader->toNextSection();
                 break;
             }
         }
     }
-    
+
 }
 void loadMREA(std::vector<char> rawFile, PrimeAssetID AssetID)
 {
+
+    //std::ofstream wf("mrea.dat", std::ios::out | std::ios::binary);
+    //wf.write(rawFile.data(), rawFile.size());
+    //wf.close();
     FileReader reader;
     reader.init((uint8_t*)&(rawFile[0]));
     MREAMap[AssetID].magic = 0xBAD0DADA;
@@ -1130,13 +1483,13 @@ void loadMREA(std::vector<char> rawFile, PrimeAssetID AssetID)
     reader.readInt32(&MREAMap[AssetID].version);
     std::cout << std::hex << "[" << (reader.getloc - sizeof(MREAMap[AssetID].version)) << " :: " << (reader.getloc) << "] version:" << MREAMap[AssetID].version << std::dec << std::endl;
 
-    
+
     for (int i = 0; i < 12; i++) {
         reader.readFloat(&MREAMap[AssetID].areaTransform[i]);
     }
-    std::cout << "| " << MREAMap[AssetID].areaTransform[0] << "\t" << MREAMap[AssetID].areaTransform[1] << "\t" << MREAMap[AssetID].areaTransform[2] << "\t" << MREAMap[AssetID].areaTransform[3] << "\t|"<< std::endl;
-    std::cout << "| " << MREAMap[AssetID].areaTransform[4] << "\t" << MREAMap[AssetID].areaTransform[5] << "\t" << MREAMap[AssetID].areaTransform[6] << "\t" << MREAMap[AssetID].areaTransform[7] << "\t|"<< std::endl;
-    std::cout << "| " << MREAMap[AssetID].areaTransform[8] << "\t" << MREAMap[AssetID].areaTransform[9] << "\t" << MREAMap[AssetID].areaTransform[10] << "\t" << MREAMap[AssetID].areaTransform[11] << "\t|"<< std::endl;
+    std::cout << "| " << MREAMap[AssetID].areaTransform[0] << "\t" << MREAMap[AssetID].areaTransform[1] << "\t" << MREAMap[AssetID].areaTransform[2] << "\t" << MREAMap[AssetID].areaTransform[3] << "\t|" << std::endl;
+    std::cout << "| " << MREAMap[AssetID].areaTransform[4] << "\t" << MREAMap[AssetID].areaTransform[5] << "\t" << MREAMap[AssetID].areaTransform[6] << "\t" << MREAMap[AssetID].areaTransform[7] << "\t|" << std::endl;
+    std::cout << "| " << MREAMap[AssetID].areaTransform[8] << "\t" << MREAMap[AssetID].areaTransform[9] << "\t" << MREAMap[AssetID].areaTransform[10] << "\t" << MREAMap[AssetID].areaTransform[11] << "\t|" << std::endl;
 
 
     reader.readInt32(&MREAMap[AssetID].worldModelCount);
@@ -1173,8 +1526,15 @@ void loadMREA(std::vector<char> rawFile, PrimeAssetID AssetID)
     for (int i = 0; i < MREAMap[AssetID].dataSectionCount; i++)
     {
         reader.readInt32(&MREAMap[AssetID].dataSectionSizes[i]);
+        reader.addSectionSize(MREAMap[AssetID].dataSectionSizes[i]);
     }
-    
+    reader.seekBoundary32();
+    reader.sectionAncor = reader.getloc;
+    MaterialSet m;
+    loadMaterialSet(&reader, &m);
+    //reader.toNextSection();
+    MPGeometry geometry;
+    loadGeometry(&reader, &geometry, m, true, true);
 }
 void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
 {
@@ -1577,9 +1937,9 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
     reader.readInt32(&CMDLMap[AssetID].magic);
     std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(CMDLMap[AssetID].magic)) << "] magic:" << CMDLMap[AssetID].magic << std::dec << std::endl;
 
-    reader.readInt32(&CMDLMap[AssetID].version); 
+    reader.readInt32(&CMDLMap[AssetID].version);
     std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(CMDLMap[AssetID].version)) << "] version:" << CMDLMap[AssetID].version << std::dec << std::endl;
-    
+
     reader.readInt32(&CMDLMap[AssetID].flags);
     std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(CMDLMap[AssetID].flags)) << "] flags:" << std::endl;
     std::cout << "\tIndicates the model is skinned: " << ((CMDLMap[AssetID].flags & 0x1) > 0 ? "1" : "0") << std::endl;
@@ -1618,404 +1978,21 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
 
     //uint32_t upperGetLoc = reader.getloc;
     reader.sectionAncor = reader.getloc;
+
+    //reader.showDiag();
+    //reader.sectionIndex++;
     std::cout << "reading material data from " << std::hex << reader.getloc << std::dec << std::endl;
-
-
-    for (int imat = 0; imat < CMDLMap[AssetID].MaterialSetCount; imat++)
+    for (int i = 0; i < CMDLMap[AssetID].MaterialSetCount; i++)
     {
-        reader.readInt32(&CMDLMap[AssetID].materialSets[imat].textureCount);
-        std::cout << "textures: " << CMDLMap[AssetID].materialSets[imat].textureCount << std::endl;
-        CMDLMap[AssetID].materialSets[imat].textureFileIDs.resize(CMDLMap[AssetID].materialSets[imat].textureCount);
-        
-        for (int tx = 0; tx < CMDLMap[AssetID].materialSets[imat].textureCount; tx++) {
-            reader.readInt32(&CMDLMap[AssetID].materialSets[imat].textureFileIDs[tx]);
-            std::cout << "texture used: " << std::hex << CMDLMap[AssetID].materialSets[imat].textureFileIDs[tx] << std::dec << std::endl;
-        }
-
-
-        reader.readInt32(&(CMDLMap[AssetID].materialSets[imat].materialCount));
-        std::cout << CMDLMap[AssetID].materialSets[imat].materialCount << std::endl;
-        
-        CMDLMap[AssetID].materialSets[imat].materialEndOffsets.resize(CMDLMap[AssetID].materialSets[imat].materialCount);
-        for (int mc = 0; mc < CMDLMap[AssetID].materialSets[imat].materialCount; mc++) {
-            reader.readInt32(&CMDLMap[AssetID].materialSets[imat].materialEndOffsets[mc]);
-            std::cout << "material end offset: " << std::hex << CMDLMap[AssetID].materialSets[imat].materialEndOffsets[mc] << std::dec << std::endl;
-        }
-
-        uint32_t materialStartingMarker = reader.getloc;
-
-        CMDLMap[AssetID].materialSets[imat].materials.resize(CMDLMap[AssetID].materialSets[imat].materialCount + 5);
-        for (int ijk = 0; ijk < CMDLMap[AssetID].materialSets[imat].materialCount; ijk++)
-        {
-            uint32_t flags;
-            reader.readInt32(&flags);
-            std::cout << "offset: " << std::hex << reader.getloc << std::dec << std::endl;
-            std::cout << "material properties:" << std::endl;
-            std::cout << "\tUnused, always set:                                " << ((flags & 0x01) > 0 ? "on" : "off") << std::endl;
-            std::cout << "\tUnused, always set:                                " << ((flags & 0x02) > 0 ? "on" : "off") << std::endl;
-            std::cout << "\tUnused, never set:                                 " << ((flags & 0x04) > 0 ? "on" : "off") << std::endl;
-            std::cout << "\tHas Konst values:                                  " << ((flags & 0x08) > 0 ? "on" : "off") << std::endl;
-            std::cout << "\tIs transparent:                                    " << ((flags & 0x10) > 0 ? "on" : "off") << std::endl;
-            std::cout << "\tMasked alpha:                                      " << ((flags & 0x20) > 0 ? "on" : "off") << std::endl;
-            std::cout << "\tEnable Samus's reflection:                         " << ((flags & 0x40) > 0 ? "on" : "off") << std::endl;
-            std::cout << "\tEnable Z-writes:                                   " << ((flags & 0x80) > 0 ? "on" : "off") << std::endl;
-            std::cout << "\tEnable Samus's reflection, using the eye position: " << ((flags & 0x100) > 0 ? "on" : "off") << std::endl;
-            std::cout << "\tShadow occluder mesh:                              " << ((flags & 0x200) > 0 ? "on" : "off") << std::endl;
-            std::cout << "\tEnable indirect texture stage for reflections:     " << ((flags & 0x400) > 0 ? "on" : "off") << std::endl;
-            std::cout << "\tIndicates a lightmap is present:                   " << ((flags & 0x800) > 0 ? "on" : "off") << std::endl;
-            std::cout << "\tUnused, always set:                                " << ((flags & 0x1000) > 0 ? "on" : "off") << std::endl;
-            std::cout << "\tEnable first UV coordinate to use short array:     " << ((flags & 0x2000) > 0 ? "on" : "off") << std::endl;
-            std::cout << "\tunused, never set:                                 " << ((flags & 0x4000) > 0 ? "on" : "off") << std::endl;
-            std::cout << "\tunused, never set:                                 " << ((flags & 0x8000) > 0 ? "on" : "off") << std::endl;
-            uint32_t TC;
-            reader.readInt32(&TC);
-            std::cout << "Texture Count: " << TC << std::endl;
-
-            while (TC > 100) {}//safety to prevent crahes
-            CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices.resize(TC);
-            std::cout << "textures:" << std::endl;
-            for (int tx = 0; tx < TC; tx++) {
-                reader.readInt32(&CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx]);
-                std::cout << "\ttexture: " << std::hex << CMDLMap[AssetID].materialSets[imat].textureFileIDs[CMDLMap[AssetID].materialSets[imat].materials[ijk].textureFileIndices[tx]] << std::dec << std::endl;
-            }
-
-
-            reader.readInt32(&CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags);
-            std::cout << "vertex atributes: " << std::endl;
-            std::cout << "\tPosition: " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x000003) > 0 ? "1" : "0") << std::endl;
-            std::cout << "\tNormal:   " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x00000C) > 0 ? "1" : "0") << std::endl;
-            std::cout << "\tColor 0:  " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x000030) > 0 ? "1" : "0") << std::endl;
-            std::cout << "\tColor 1:  " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x0000C0) > 0 ? "1" : "0") << std::endl;
-            std::cout << "\tTex 0:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x000300) > 0 ? "1" : "0") << std::endl;
-            std::cout << "\tTex 1:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x000C00) > 0 ? "1" : "0") << std::endl;
-            std::cout << "\tTex 2:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x003000) > 0 ? "1" : "0") << std::endl;
-            std::cout << "\tTex 3:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x00C000) > 0 ? "1" : "0") << std::endl;
-            std::cout << "\tTex 4:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x030000) > 0 ? "1" : "0") << std::endl;
-            std::cout << "\tTex 5:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x0C0000) > 0 ? "1" : "0") << std::endl;
-            std::cout << "\tTex 6:    " << ((CMDLMap[AssetID].materialSets[imat].materials[ijk].vertexAtributeFlags & 0x300000) > 0 ? "1" : "0") << std::endl;
-            uint32_t groupIndex;
-            reader.readInt32(&groupIndex);
-            std::cout << "group index: " << groupIndex << std::endl;
-            if ((flags & 0x08) > 0)
-            {
-                uint32_t KonstCount;
-                reader.readInt32(&KonstCount);
-                std::cout << "KonstCount: " << KonstCount << std::endl;
-                CMDLMap[AssetID].materialSets[imat].materials[ijk].konstColors.resize(KonstCount);
-
-                for (int mc = 0; mc < KonstCount; mc++) {
-                    reader.readInt32(&CMDLMap[AssetID].materialSets[imat].materials[ijk].konstColors[mc]);
-                    std::cout << "konst color " << mc << ": " << std::hex << CMDLMap[AssetID].materialSets[imat].materials[ijk].konstColors[mc] << std::dec << std::endl;
-
-                }
-            }
-
-
-
-            uint16_t blendDestFactor;
-            reader.readInt16(&blendDestFactor);
-            std::cout << "blendDestFactor: " << blendDestFactor << std::endl;
-
-            uint16_t blendSourceFactor;
-            reader.readInt16(&blendSourceFactor);
-            std::cout << "blendSourceFactor: " << blendSourceFactor << std::endl;
-
-            if ((flags & 0x400) != 0)
-            {
-                uint32_t reflectionIndirectTextureIndex;
-                reader.readInt32(&reflectionIndirectTextureIndex);
-                std::cout << "reflection Indirect Texture Index: " << reflectionIndirectTextureIndex << std::endl;
-            }
-
-
-            reader.readInt32(&CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount);
-            std::cout << "color channel count: " << CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelCount << std::endl;
-
-            reader.readInt32(&CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags);
-            std::cout << "color channel flags: " << CMDLMap[AssetID].materialSets[imat].materials[ijk].ColorChannelFlags << std::dec << std::endl;
-
-
-
-            uint32_t TEVStageCount;
-            reader.readInt32(&TEVStageCount);
-            std::cout << "TEV Stage Count: " << TEVStageCount << std::endl;
-
-            for (int ijkl = 0; ijkl < TEVStageCount; ijkl++)
-            {
-                std::cout << std::hex << "[" << reader.getloc << "] TEV stage " << std::dec << ijkl << ": " << std::endl;
-                uint32_t colorInputFlags;
-                reader.readInt32(&colorInputFlags);
-                std::cout << "\tColor input flags (color0): ";
-                        if ((colorInputFlags & 0x1f) == 0x0) std::cout << "Previous stage RGB"<<std::endl;
-                else if ((colorInputFlags & 0x1f) == 0x1) std::cout << "Previous stage AAA"<<std::endl;
-                else if ((colorInputFlags & 0x1f) == 0x2) std::cout << "Color 0 RGB"<<std::endl;
-                else if ((colorInputFlags & 0x1f) == 0x3) std::cout << "Color 0 AAA"<<std::endl;
-                else if ((colorInputFlags & 0x1f) == 0x4) std::cout << "Color 1 RGB"<<std::endl;
-                else if ((colorInputFlags & 0x1f) == 0x5) std::cout << "Color 1 AAA"<<std::endl;
-                else if ((colorInputFlags & 0x1f) == 0x6) std::cout << "Color 2 RGB"<<std::endl;
-                else if ((colorInputFlags & 0x1f) == 0x7) std::cout << "Color 2 AAA"<<std::endl;
-                else if ((colorInputFlags & 0x1f) == 0x8) std::cout << "Texture RGB"<<std::endl;
-                else if ((colorInputFlags & 0x1f) == 0x9) std::cout << "Texture AAA"<<std::endl;
-                else if ((colorInputFlags & 0x1f) == 0xa) std::cout << "Rasterized RGB"<<std::endl;
-                else if ((colorInputFlags & 0x1f) == 0xb) std::cout << "Rasterized AAA"<<std::endl;
-                else if ((colorInputFlags & 0x1f) == 0xc) std::cout << "One"<<std::endl;
-                else if ((colorInputFlags & 0x1f) == 0xd) std::cout << "Half"<<std::endl;
-                else if ((colorInputFlags & 0x1f) == 0xe) std::cout << "Konstant RGB"<<std::endl;
-                else if ((colorInputFlags & 0x1f) == 0xf) std::cout << "Zero"<<std::endl;
-
-                std::cout << "\tColor input flags (color1): ";
-                        if (((colorInputFlags & 0x3E0) >> 5) == 0x0) std::cout << "Previous stage RGB" << std::endl;
-                else if (((colorInputFlags & 0x3E0) >> 5) == 0x1) std::cout << "Previous stage AAA" << std::endl;
-                else if (((colorInputFlags & 0x3E0) >> 5) == 0x2) std::cout << "Color 0 RGB" << std::endl;
-                else if (((colorInputFlags & 0x3E0) >> 5) == 0x3) std::cout << "Color 0 AAA" << std::endl;
-                else if (((colorInputFlags & 0x3E0) >> 5) == 0x4) std::cout << "Color 1 RGB" << std::endl;
-                else if (((colorInputFlags & 0x3E0) >> 5) == 0x5) std::cout << "Color 1 AAA" << std::endl;
-                else if (((colorInputFlags & 0x3E0) >> 5) == 0x6) std::cout << "Color 2 RGB" << std::endl;
-                else if (((colorInputFlags & 0x3E0) >> 5) == 0x7) std::cout << "Color 2 AAA" << std::endl;
-                else if (((colorInputFlags & 0x3E0) >> 5) == 0x8) std::cout << "Texture RGB" << std::endl;
-                else if (((colorInputFlags & 0x3E0) >> 5) == 0x9) std::cout << "Texture AAA" << std::endl;
-                else if (((colorInputFlags & 0x3E0) >> 5) == 0xa) std::cout << "Rasterized RGB" << std::endl;
-                else if (((colorInputFlags & 0x3E0) >> 5) == 0xb) std::cout << "Rasterized AAA" << std::endl;
-                else if (((colorInputFlags & 0x3E0) >> 5) == 0xc) std::cout << "One" << std::endl;
-                else if (((colorInputFlags & 0x3E0) >> 5) == 0xd) std::cout << "Half" << std::endl;
-                else if (((colorInputFlags & 0x3E0) >> 5) == 0xe) std::cout << "Konstant RGB" << std::endl;
-                else if (((colorInputFlags & 0x3E0) >> 5) == 0xf) std::cout << "Zero" << std::endl;
-
-                std::cout << "\tColor input flags (color2): ";
-                        if (((colorInputFlags & 0x7C00) >> 10) == 0x0) std::cout << "Previous stage RGB" << std::endl;
-                else if (((colorInputFlags & 0x7C00) >> 10) == 0x1) std::cout << "Previous stage AAA" << std::endl;
-                else if (((colorInputFlags & 0x7C00) >> 10) == 0x2) std::cout << "Color 0 RGB" << std::endl;
-                else if (((colorInputFlags & 0x7C00) >> 10) == 0x3) std::cout << "Color 0 AAA" << std::endl;
-                else if (((colorInputFlags & 0x7C00) >> 10) == 0x4) std::cout << "Color 1 RGB" << std::endl;
-                else if (((colorInputFlags & 0x7C00) >> 10) == 0x5) std::cout << "Color 1 AAA" << std::endl;
-                else if (((colorInputFlags & 0x7C00) >> 10) == 0x6) std::cout << "Color 2 RGB" << std::endl;
-                else if (((colorInputFlags & 0x7C00) >> 10) == 0x7) std::cout << "Color 2 AAA" << std::endl;
-                else if (((colorInputFlags & 0x7C00) >> 10) == 0x8) std::cout << "Texture RGB" << std::endl;
-                else if (((colorInputFlags & 0x7C00) >> 10) == 0x9) std::cout << "Texture AAA" << std::endl;
-                else if (((colorInputFlags & 0x7C00) >> 10) == 0xa) std::cout << "Rasterized RGB" << std::endl;
-                else if (((colorInputFlags & 0x7C00) >> 10) == 0xb) std::cout << "Rasterized AAA" << std::endl;
-                else if (((colorInputFlags & 0x7C00) >> 10) == 0xc) std::cout << "One" << std::endl;
-                else if (((colorInputFlags & 0x7C00) >> 10) == 0xd) std::cout << "Half" << std::endl;
-                else if (((colorInputFlags & 0x7C00) >> 10) == 0xe) std::cout << "Konstant RGB" << std::endl;
-                else if (((colorInputFlags & 0x7C00) >> 10) == 0xf) std::cout << "Zero" << std::endl;
-                    
-                std::cout << "\tColor input flags (color3): ";
-                        if (((colorInputFlags & 0xF8000) >> 15) == 0x0) std::cout << "Previous stage RGB" << std::endl;
-                else if (((colorInputFlags & 0xF8000) >> 15) == 0x1) std::cout << "Previous stage AAA" << std::endl;
-                else if (((colorInputFlags & 0xF8000) >> 15) == 0x2) std::cout << "Color 0 RGB" << std::endl;
-                else if (((colorInputFlags & 0xF8000) >> 15) == 0x3) std::cout << "Color 0 AAA" << std::endl;
-                else if (((colorInputFlags & 0xF8000) >> 15) == 0x4) std::cout << "Color 1 RGB" << std::endl;
-                else if (((colorInputFlags & 0xF8000) >> 15) == 0x5) std::cout << "Color 1 AAA" << std::endl;
-                else if (((colorInputFlags & 0xF8000) >> 15) == 0x6) std::cout << "Color 2 RGB" << std::endl;
-                else if (((colorInputFlags & 0xF8000) >> 15) == 0x7) std::cout << "Color 2 AAA" << std::endl;
-                else if (((colorInputFlags & 0xF8000) >> 15) == 0x8) std::cout << "Texture RGB" << std::endl;
-                else if (((colorInputFlags & 0xF8000) >> 15) == 0x9) std::cout << "Texture AAA" << std::endl;
-                else if (((colorInputFlags & 0xF8000) >> 15) == 0xa) std::cout << "Rasterized RGB" << std::endl;
-                else if (((colorInputFlags & 0xF8000) >> 15) == 0xb) std::cout << "Rasterized AAA" << std::endl;
-                else if (((colorInputFlags & 0xF8000) >> 15) == 0xc) std::cout << "One" << std::endl;
-                else if (((colorInputFlags & 0xF8000) >> 15) == 0xd) std::cout << "Half" << std::endl;
-                else if (((colorInputFlags & 0xF8000) >> 15) == 0xe) std::cout << "Konstant RGB" << std::endl;
-                else if (((colorInputFlags & 0xF8000) >> 15) == 0xf) std::cout << "Zero" << std::endl;
-
-
-                    
-                uint32_t alphaInputFlags;
-                reader.readInt32(&alphaInputFlags);
-                std::cout << "\tAlpha input flags (color0): ";
-                        if ((alphaInputFlags & 0x1f) == 0x0) std::cout << "Previous stage alpha" << std::endl;
-                else if ((alphaInputFlags & 0x1f) == 0x1) std::cout << "Color 0 alpha" << std::endl;
-                else if ((alphaInputFlags & 0x1f) == 0x2) std::cout << "Color 1 alpha" << std::endl;
-                else if ((alphaInputFlags & 0x1f) == 0x3) std::cout << "Color 2 alpha" << std::endl;
-                else if ((alphaInputFlags & 0x1f) == 0x4) std::cout << "Texture alpha" << std::endl;
-                else if ((alphaInputFlags & 0x1f) == 0x5) std::cout << "Rasterized alpha" << std::endl;
-                else if ((alphaInputFlags & 0x1f) == 0x6) std::cout << "Konstant alpha" << std::endl;
-                else if ((alphaInputFlags & 0x1f) == 0x7) std::cout << "Zero" << std::endl;
-
-                std::cout << "\tAlpha input flags (color1): ";
-                        if (((alphaInputFlags & 0x3E0) >> 5) == 0x0) std::cout << "Previous stage alpha" << std::endl;
-                else if (((alphaInputFlags & 0x3E0) >> 5) == 0x1) std::cout << "Color 0 alpha" << std::endl;
-                else if (((alphaInputFlags & 0x3E0) >> 5) == 0x2) std::cout << "Color 1 alpha" << std::endl;
-                else if (((alphaInputFlags & 0x3E0) >> 5) == 0x3) std::cout << "Color 2 alpha" << std::endl;
-                else if (((alphaInputFlags & 0x3E0) >> 5) == 0x4) std::cout << "Texture alpha" << std::endl;
-                else if (((alphaInputFlags & 0x3E0) >> 5) == 0x5) std::cout << "Rasterized alpha" << std::endl;
-                else if (((alphaInputFlags & 0x3E0) >> 5) == 0x6) std::cout << "Konstant alpha" << std::endl;
-                else if (((alphaInputFlags & 0x3E0) >> 5) == 0x7) std::cout << "Zero" << std::endl;
-
-                std::cout << "\tAlpha input flags (color2): ";
-                        if (((alphaInputFlags & 0x7C00) >> 10) == 0x0) std::cout << "Previous stage alpha" << std::endl;
-                else if (((alphaInputFlags & 0x7C00) >> 10) == 0x1) std::cout << "Color 0 alpha" << std::endl;
-                else if (((alphaInputFlags & 0x7C00) >> 10) == 0x2) std::cout << "Color 1 alpha" << std::endl;
-                else if (((alphaInputFlags & 0x7C00) >> 10) == 0x3) std::cout << "Color 2 alpha" << std::endl;
-                else if (((alphaInputFlags & 0x7C00) >> 10) == 0x4) std::cout << "Texture alpha" << std::endl;
-                else if (((alphaInputFlags & 0x7C00) >> 10) == 0x5) std::cout << "Rasterized alpha" << std::endl;
-                else if (((alphaInputFlags & 0x7C00) >> 10) == 0x6) std::cout << "Konstant alpha" << std::endl;
-                else if (((alphaInputFlags & 0x7C00) >> 10) == 0x7) std::cout << "Zero" << std::endl;
-
-                std::cout << "\tAlpha input flags (color3): ";
-                        if (((alphaInputFlags & 0xF8000) >> 15) == 0x0) std::cout << "Previous stage alpha" << std::endl;
-                else if (((alphaInputFlags & 0xF8000) >> 15) == 0x1) std::cout << "Color 0 alpha" << std::endl;
-                else if (((alphaInputFlags & 0xF8000) >> 15) == 0x2) std::cout << "Color 1 alpha" << std::endl;
-                else if (((alphaInputFlags & 0xF8000) >> 15) == 0x3) std::cout << "Color 2 alpha" << std::endl;
-                else if (((alphaInputFlags & 0xF8000) >> 15) == 0x4) std::cout << "Texture alpha" << std::endl;
-                else if (((alphaInputFlags & 0xF8000) >> 15) == 0x5) std::cout << "Rasterized alpha" << std::endl;
-                else if (((alphaInputFlags & 0xF8000) >> 15) == 0x6) std::cout << "Konstant alpha" << std::endl;
-                else if (((alphaInputFlags & 0xF8000) >> 15) == 0x7) std::cout << "Zero" << std::endl;
-
-                uint32_t colorCombineFlags;
-                reader.readInt32(&colorCombineFlags);
-                std::cout << "\tcolor combine flags: " << std::endl;
-                std::cout << "\tCombiner operator:   " << ((colorCombineFlags & 0x0000000F) >> 0) << std::endl;
-                std::cout << "\tBias:                " << ((colorCombineFlags & 0x00000030) >> 4) << std::endl;
-                std::cout << "\tScale:               " << ((colorCombineFlags & 0x000000C0) >> 6) << std::endl;
-                std::cout << "\tClamp flag:          " << ((colorCombineFlags & 0x00000100) >> 8) << std::endl;
-                std::cout << "\tOutput register:     " << ((colorCombineFlags & 0x00000600) >> 9) << std::endl;
-                std::cout << "\tUnused:              " << ((colorCombineFlags & 0xFFFFF800) >> 11) << std::endl;
-
-                uint32_t alphaCombineFlags;
-                reader.readInt32(&alphaCombineFlags);
-                std::cout << "\talpha combine flags: " << std::endl;
-                std::cout << "\tCombiner operator:   " << ((alphaCombineFlags & 0x0000000F) >> 0) << std::endl;
-                std::cout << "\tBias:                " << ((alphaCombineFlags & 0x00000030) >> 4) << std::endl;
-                std::cout << "\tScale:               " << ((alphaCombineFlags & 0x000000C0) >> 6) << std::endl;
-                std::cout << "\tClamp flag:          " << ((alphaCombineFlags & 0x00000100) >> 8) << std::endl;
-                std::cout << "\tOutput register:     " << ((alphaCombineFlags & 0x00000600) >> 9) << std::endl;
-                std::cout << "\tUnused:              " << ((alphaCombineFlags & 0xFFFFF800) >> 11) << std::endl;
-
-
-
-                uint8_t padding;
-                reader.readInt8(&padding);
-
-                uint8_t konstAlphaInput;
-                reader.readInt8(&konstAlphaInput);
-
-                uint8_t konstColorInput;
-                reader.readInt8(&konstColorInput);
-
-                uint8_t rasterizedColorInput;
-                reader.readInt8(&rasterizedColorInput);
-            }
-            for (int ijkl = 0; ijkl < TEVStageCount; ijkl++)
-            {
-                uint16_t padding;
-                reader.readInt16(&padding);
-
-                uint8_t textureTEVInput;
-                reader.readInt8(&textureTEVInput);
-                std::cout << "texture TEV Input: " << (uint32_t)textureTEVInput << std::endl;
-
-                uint8_t texCoordTEVInput;
-                reader.readInt8(&texCoordTEVInput);
-                std::cout << "texture coord TEV Input: " << (uint32_t)texCoordTEVInput << std::endl;
-            }
-
-            uint32_t texGenCount;
-            reader.readInt32(&texGenCount);
-            std::cout << "texGen Count: " << texGenCount << std::endl;
-
-            for (int ijkl = 0; ijkl < texGenCount; ijkl++)
-            {
-                uint32_t texGenFlag;
-                reader.readInt32(&texGenFlag);
-                std::cout << "texGen flag "<<ijkl<<": " << std::endl;
-                std::cout << "\ttexCoord gen type: ";
-                switch (ijkl&0xF)
-                {
-                    case GX_TG_BUMP0:   std::cout << "GX_TG_BUMP0"  << std::endl; break;
-                    case GX_TG_BUMP1:   std::cout << "GX_TG_BUMP1"  << std::endl; break;
-                    case GX_TG_BUMP2:   std::cout << "GX_TG_BUMP2"  << std::endl; break;
-                    case GX_TG_BUMP3:   std::cout << "GX_TG_BUMP3"  << std::endl; break;
-                    case GX_TG_BUMP4:   std::cout << "GX_TG_BUMP4"  << std::endl; break;
-                    case GX_TG_BUMP5:   std::cout << "GX_TG_BUMP5"  << std::endl; break;
-                    case GX_TG_BUMP6:   std::cout << "GX_TG_BUMP6"  << std::endl; break;
-                    case GX_TG_BUMP7:   std::cout << "GX_TG_BUMP7"  << std::endl; break;
-                    case GX_TG_MTX2x4:  std::cout << "GX_TG_MTX2x4" << std::endl; break;
-                    case GX_TG_MTX3x4:  std::cout << "GX_TG_MTX3x4" << std::endl; break;
-                    case GX_TG_SRTG:    std::cout << "GX_TG_SRTG"   << std::endl; break;
-                }
-                std::cout << "\ttexCoord src: ";
-                switch ((ijkl & 0x1F0) >> 4)
-                {
-                    case GX_TG_BINRM    : std::cout << "GX_TG_BINRM     " << std::endl;break;
-                    case GX_TG_COLOR0   : std::cout << "GX_TG_COLOR0    " << std::endl;break;
-                    case GX_TG_COLOR1   : std::cout << "GX_TG_COLOR1    " << std::endl;break;
-                    case GX_TG_NRM      : std::cout << "GX_TG_NRM       " << std::endl;break;
-                    case GX_TG_POS      : std::cout << "GX_TG_POS       " << std::endl;break;
-                    case GX_TG_TANGENT  : std::cout << "GX_TG_TANGENT   " << std::endl;break;
-                    case GX_TG_TEX0     : std::cout << "GX_TG_TEX0      " << std::endl;break;
-                    case GX_TG_TEX1     : std::cout << "GX_TG_TEX1      " << std::endl;break;
-                    case GX_TG_TEX2     : std::cout << "GX_TG_TEX2      " << std::endl;break;
-                    case GX_TG_TEX3     : std::cout << "GX_TG_TEX3      " << std::endl;break;
-                    case GX_TG_TEX4     : std::cout << "GX_TG_TEX4      " << std::endl;break;
-                    case GX_TG_TEX5     : std::cout << "GX_TG_TEX5      " << std::endl;break;
-                    case GX_TG_TEX6     : std::cout << "GX_TG_TEX6      " << std::endl;break;
-                    case GX_TG_TEX7     : std::cout << "GX_TG_TEX7      " << std::endl;break;
-                    case GX_TG_TEXCOORD0: std::cout << "GX_TG_TEXCOORD0 " << std::endl;break;
-                    case GX_TG_TEXCOORD1: std::cout << "GX_TG_TEXCOORD1 " << std::endl;break;
-                    case GX_TG_TEXCOORD2: std::cout << "GX_TG_TEXCOORD2 " << std::endl;break;
-                    case GX_TG_TEXCOORD3: std::cout << "GX_TG_TEXCOORD3 " << std::endl;break;
-                    case GX_TG_TEXCOORD4: std::cout << "GX_TG_TEXCOORD4 " << std::endl;break;
-                    case GX_TG_TEXCOORD5: std::cout << "GX_TG_TEXCOORD5 " << std::endl;break;
-                    case GX_TG_TEXCOORD6: std::cout << "GX_TG_TEXCOORD6 " << std::endl;break;
-                }
-                std::cout << "\ttex matrix index: ";
-                switch (((ijkl & 0x3E00) >> 9) + 30)
-                {
-                    case GX_IDENTITY: std::cout << "GX_IDENTITY" << std::endl;break;
-                    case GX_TEXMTX0 : std::cout << "GX_TEXMTX0 " << std::endl;break;
-                    case GX_TEXMTX1 : std::cout << "GX_TEXMTX1 " << std::endl;break;
-                    case GX_TEXMTX2 : std::cout << "GX_TEXMTX2 " << std::endl;break;
-                    case GX_TEXMTX3 : std::cout << "GX_TEXMTX3 " << std::endl;break;
-                    case GX_TEXMTX4 : std::cout << "GX_TEXMTX4 " << std::endl;break;
-                    case GX_TEXMTX5 : std::cout << "GX_TEXMTX5 " << std::endl;break;
-                    case GX_TEXMTX6 : std::cout << "GX_TEXMTX6 " << std::endl;break;
-                    case GX_TEXMTX7 : std::cout << "GX_TEXMTX7 " << std::endl;break;
-                    case GX_TEXMTX8 : std::cout << "GX_TEXMTX8 " << std::endl;break;
-                    case GX_TEXMTX9 : std::cout << "GX_TEXMTX9 " << std::endl;break;
-                }
-                std::cout << "\tnormalize flag: " << ((ijkl&0x4000)>0?"on":"off") << std::endl;
-                std::cout << "\tpost transform tex matrix index: ";
-                switch (((ijkl & 0x1F8000) >> 15)+64)
-                {
-                    case GX_DTTIDENTITY: std::cout << "GX_DTTIDENTITY" << std::endl;break;
-                    case GX_DTTMTX0    : std::cout << "GX_DTTMTX0    " << std::endl;break;
-                    case GX_DTTMTX1    : std::cout << "GX_DTTMTX1    " << std::endl;break;
-                    case GX_DTTMTX10   : std::cout << "GX_DTTMTX10   " << std::endl;break;
-                    case GX_DTTMTX11   : std::cout << "GX_DTTMTX11   " << std::endl;break;
-                    case GX_DTTMTX12   : std::cout << "GX_DTTMTX12   " << std::endl;break;
-                    case GX_DTTMTX13   : std::cout << "GX_DTTMTX13   " << std::endl;break;
-                    case GX_DTTMTX14   : std::cout << "GX_DTTMTX14   " << std::endl;break;
-                    case GX_DTTMTX15   : std::cout << "GX_DTTMTX15   " << std::endl;break;
-                    case GX_DTTMTX16   : std::cout << "GX_DTTMTX16   " << std::endl;break;
-                    case GX_DTTMTX17   : std::cout << "GX_DTTMTX17   " << std::endl;break;
-                    case GX_DTTMTX18   : std::cout << "GX_DTTMTX18   " << std::endl;break;
-                    case GX_DTTMTX19   : std::cout << "GX_DTTMTX19   " << std::endl;break;
-                    case GX_DTTMTX2    : std::cout << "GX_DTTMTX2    " << std::endl;break;
-                    case GX_DTTMTX3    : std::cout << "GX_DTTMTX3    " << std::endl;break;
-                    case GX_DTTMTX4    : std::cout << "GX_DTTMTX4    " << std::endl;break;
-                    case GX_DTTMTX5    : std::cout << "GX_DTTMTX5    " << std::endl;break;
-                    case GX_DTTMTX6    : std::cout << "GX_DTTMTX6    " << std::endl;break;
-                    case GX_DTTMTX7    : std::cout << "GX_DTTMTX7    " << std::endl;break;
-                    case GX_DTTMTX8    : std::cout << "GX_DTTMTX8    " << std::endl;break;
-                    case GX_DTTMTX9    : std::cout << "GX_DTTMTX9    " << std::endl;break;
-                }
-            }
-
-            reader.getloc = materialStartingMarker+ CMDLMap[AssetID].materialSets[imat].materialEndOffsets[ijk];
-
-        }
-        //upperGetLoc += CMDLMap[AssetID].dataSectionSizes[imat];
-        //subGetLoc = upperGetLoc;
-        reader.toNextSection();
+        loadMaterialSet(&reader, &CMDLMap[AssetID].materialSets[i]);
     }
-
+    //reader.toNextSection();
     std::cout << "reading geometry data from " << std::hex << reader.getloc << std::dec << std::endl;
-    loadGeometry(reader, &CMDLMap[AssetID].geometry, CMDLMap[AssetID].materialSets[0]);//TEMP
+    loadGeometry(&reader, &CMDLMap[AssetID].geometry, CMDLMap[AssetID].materialSets[0], halfPrecisionNormals, halfPrecisionUVs);
 
 
-    
+
 }
-
 void loadPak(std::string filename)
 {
     int tempcounter = 0;
@@ -2196,7 +2173,7 @@ void loadPak(std::string filename)
             }
             else if (fourCC[0] == 'C' && fourCC[1] == 'M' && fourCC[2] == 'D' && fourCC[3] == 'L')
             {
-                
+
 
                 tempcounter++;
             }
