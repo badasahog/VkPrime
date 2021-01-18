@@ -1393,13 +1393,14 @@ private:
 
 
         //MLVL mlvl = *loadMLVL(0x83F6FF6F, "Metroid2.pak");
+        //MREA area = *loadMREA(0x3E6B2BB7, "Metroid2.pak");
+
         tempCMDLID = 0x729EA8BA;// mlvl.defaultSkyboxID;
         CMDL cmdl = *loadCMDL(tempCMDLID, "Metroid2.pak");
         imageStuffs.resize(cmdl.materialSets[0].textureCount);
         for(int i = 0;i<cmdl.materialSets[0].textureCount;i++)
             loadTXTR(cmdl.materialSets[0].textureFileIDs[i], "Metroid2.pak");
 
-        //MREA area = *loadMREA(0x3E6B2BB7, "Metroid2.pak");
 
         //loadSTRG(mlvl.worldNameID,"Metroid2.pak");
         //

@@ -215,6 +215,8 @@ struct CMDL {
     std::vector<uint32_t> dataSectionSizes;
     std::vector<MaterialSet> materialSets;
     MPGeometry geometry;
+    bool halfPrecisionNormals;
+    bool halfPrecisionUVs;
 };
 
 struct MREA {
@@ -999,472 +1001,10 @@ void loadMaterialSet(FileReader* reader, MaterialSet* materialSet)
     //subGetLoc = upperGetLoc;
     reader->toNextSection();
 }
-void loadGeometry(FileReader* reader, MPGeometry* geometry, MaterialSet materialSet, bool halfPrecisionNormals, bool halfPrecisionUVs)
+void loadGeometry(FileReader* reader, MPGeometry* geometry, MaterialSet materialSet, bool halfPrecisionNormals, bool halfPrecisionUVs, bool shortUVs)
 {
-    std::cout << "current section: " << reader->sectionIndex << std::endl;
-    std::cout << "current section size: " << reader->getSectionSize() << std::endl;
-    //resize the vector holding the vertex coords based on the size of that section. this will add some extra space because of the 32B padding
 
-    //for (int i = 0; i < 20; i++)
-    //{
-    //    std::cout << "section " << i << " size: " << reader->sectionSizes[i] << std::endl;
-    //}
-    //std::cout << "section index is: " << reader->sectionIndex << std::endl;
-
-    geometry->vertexCoords.resize(reader->getSectionSize() / (sizeof(float) * 3));
-
-    std::cout << "number of vert coords: " << geometry->vertexCoords.size() << std::endl;
-    for (int i = 0; i < geometry->vertexCoords.size(); i++)
-    {
-        reader->readFloat(&geometry->vertexCoords[i].x);
-        reader->readFloat(&geometry->vertexCoords[i].y);
-        reader->readFloat(&geometry->vertexCoords[i].z);
-
-    }
-
-    reader->toNextSection();
-    if (halfPrecisionNormals)
-    {
-        geometry->normals.resize(reader->getSectionSize() / (sizeof(short) * 3));
-    }
-    else
-    {
-        geometry->normals.resize(reader->getSectionSize() / (sizeof(float) * 3));
-
-    }
-
-    std::cout << "current section: " << reader->sectionIndex << std::endl;
-    std::cout << "current section size: " << reader->getSectionSize() << std::endl;
-    std::cout << "number of normal coords: " << geometry->normals.size() << std::endl;
-
-    if (halfPrecisionNormals) {
-        uint16_t temp1, temp2, temp3;
-        for (int ijk = 0; ijk < geometry->normals.size(); ijk++)
-        {
-            reader->readInt16(&temp1);
-            reader->readInt16(&temp2);
-            reader->readInt16(&temp3);
-            geometry->normals[ijk].x = temp1 / 0x8000;
-            geometry->normals[ijk].y = temp2 / 0x8000;
-            geometry->normals[ijk].z = temp3 / 0x8000;
-        }
-    }
-    else
-    {
-        for (int ijk = 0; ijk < geometry->normals.size(); ijk++)
-        {
-            reader->readFloat(&geometry->normals[ijk].x);
-            reader->readFloat(&geometry->normals[ijk].y);
-            reader->readFloat(&geometry->normals[ijk].z);
-        }
-    }
-    reader->toNextSection();
     
-    std::cout << std::hex << "[" << reader->getloc << " :: " << reader->getloc << "]" << std::dec << "skipping color data" << std::endl;
-
-    //no need to read color data, it's all empty
-    reader->toNextSection();
-    //std::cout <<__LINE__ << " " << reader->getSectionSize() << std::endl;
-    geometry->floatUVCoords.resize(reader->getSectionSize() / (sizeof(float)*2));
-
-    std::cout << "current section: " << reader->sectionIndex << std::endl;
-    std::cout << "current section size: " << reader->getSectionSize() << std::endl;
-    std::cout << "number of float UV coords: " << geometry->floatUVCoords.size() << std::endl;
-
-    for (int ijk = 0; ijk < geometry->floatUVCoords.size(); ijk++)
-    {
-        reader->readFloat(&geometry->floatUVCoords[ijk].x);
-        reader->readFloat(&geometry->floatUVCoords[ijk].y);
-    }
-    reader->toNextSection();
-
-
-
-    geometry->shortUVCoords.resize(reader->getSectionSize() / (sizeof(short) * 2));
-
-    std::cout << "number of short UV coords: " << geometry->shortUVCoords.size() << std::endl;
-
-    for (int ijk = 0; ijk < geometry->shortUVCoords.size(); ijk++)
-    {
-        reader->readInt16((uint16_t*)&geometry->shortUVCoords[ijk].x);
-        reader->readInt16((uint16_t*)&geometry->shortUVCoords[ijk].y);
-    }
-
-    reader->toNextSection();
-
-    std::cout << std::hex << "[" << reader->getloc << " :: " << reader->getloc << "]" << std::dec << "reading header data" << std::endl;
-    //the moment of truth:
-    reader->readInt32(&geometry->surfaceCount);
-    std::cout << std::hex << "[" << (reader->getloc - sizeof(geometry->surfaceCount)) << " :: " << (reader->getloc) << "] surface count:" << geometry->surfaceCount << std::dec << std::endl;
-
-    geometry->surfaceOffsets.resize(geometry->surfaceCount);
-
-    for (int ijk = 0; ijk < geometry->surfaceCount; ijk++)
-    {
-        reader->readInt32(&geometry->surfaceOffsets[ijk]);
-        std::cout << "[" << (reader->getloc - sizeof(uint32_t)) << " :: " << (reader->getloc) << "] surface offset " << ijk << ": " << std::hex << geometry->surfaceOffsets[ijk] << std::dec << std::endl;
-    }
-    geometry->surfaceOffsets.push_back(reader->getSectionSize());
-    //that's the end of this section, on to the next one
-    geometry->surfaces.resize(geometry->surfaceCount);
-    _CrtDumpMemoryLeaks();
-    //loop through each surface
-    for (int surfaceNum = 0; surfaceNum < geometry->surfaceCount; surfaceNum++)
-    {
-        reader->toNextSection();
-        MPSurface* surface = &geometry->surfaces[surfaceNum];
-        surface->clearAll();
-        int surfaceStartLoc = reader->getloc;
-        for (int i = 0; i < 3; i++)
-        {
-            reader->readFloat(&surface->centerPoint[i]);
-        }
-        std::cout << "center point: " << surface->centerPoint[0] << ", " << surface->centerPoint[1] << ", " << surface->centerPoint[2] << std::endl;
-
-        reader->readInt32(&(surface->matIndex));
-        std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->matIndex)) << " :: " << (reader->getloc) << "] matIndex:" << surface->matIndex << std::dec << std::endl;
-
-        reader->readInt16(&(surface->mantissa));
-        std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->mantissa)) << " :: " << (reader->getloc) << "] mantissa:" << surface->mantissa << std::dec << std::endl;
-
-        reader->readInt16(&(surface->displayListSize));
-        std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->displayListSize)) << " :: " << (reader->getloc) << "] displayListSize:" << surface->displayListSize << std::dec << std::endl;
-
-        reader->readInt32(&(surface->parentModelPointer));
-        std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->parentModelPointer)) << " :: " << (reader->getloc) << "] parentModelPointer:" << surface->parentModelPointer << std::dec << std::endl;
-
-        reader->readInt32(&(surface->nextSurfacePointer));
-        std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->nextSurfacePointer)) << " :: " << (reader->getloc) << "] nextSurfacePointer:" << surface->nextSurfacePointer << std::dec << std::endl;
-
-        reader->readInt32(&(surface->extraDataSize));
-        std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->extraDataSize)) << " :: " << (reader->getloc) << "] extraDataSize:" << surface->extraDataSize << std::dec << std::endl;
-
-
-        for (int ijk = 0; ijk < 3; ijk++)
-        {
-            reader->readFloat(&surface->surfaceNormal[ijk]);
-        }
-        std::cout << "surface normal: " << surface->surfaceNormal[0] << ", " << surface->surfaceNormal[1] << ", " << surface->surfaceNormal[2] << std::endl;
-
-
-
-        reader->getloc += surface->extraDataSize;
-
-        //align get location to 32 bytes before reading primatives
-        reader->seekBoundary32();
-
-        reader->readInt8(&surface->GXFlags);
-        //std::cout << std::hex << "[" << reader->getloc << " :: " << (reader->getloc + sizeof(GXFlags)) << "] GXFlags:" << GXFlags << std::dec << std::endl;
-
-        while (surface->GXFlags > 0)
-        {
-            std::bitset<8> GXFlagBits(surface->GXFlags);
-            std::cout << std::endl;
-            std::cout << GXFlagBits << std::endl;
-            std::cout << "GX_VA_NRM type / size | GX_VA_TEX0 type / size" << std::endl;
-            switch (0x7 & surface->GXFlags) {
-            case 0:
-                std::cout << " GX_NRM_XYZ / GX_F32  |   GX_TEX_ST / GX_F32" << std::endl;
-                break;
-            case 1:
-                std::cout << " GX_NRM_XYZ / GX_S16  |   GX_TEX_ST / GX_F32" << std::endl;
-                break;
-            case 2:
-                std::cout << " GX_NRM_XYZ / GX_S16  |   GX_TEX_ST / GX_S16" << std::endl;
-                break;
-            default:
-                std::cout << "fatal error" << std::endl;
-            }
-            std::cout << "format: ";
-            switch (surface->GXFlags & 0xF8)
-            {
-            case 0x80:
-                std::cout << "Quads" << std::endl;
-                break;
-            case 0x90:
-                std::cout << "Triangles" << std::endl;
-                break;
-            case 0x98:
-                std::cout << "Triangle Strip" << std::endl;
-                break;
-            case 0xA0:
-                std::cout << "Triangle Fan" << std::endl;
-                break;
-            }
-            reader->readInt16(&surface->vertexCount);
-            std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->vertexCount)) << " :: " << (reader->getloc) << "] vertex count:" << std::dec << surface->vertexCount << std::dec << std::endl;
-
-            uint16_t pos_index1before = 0;
-            uint16_t pos_index2before = 0;
-            uint16_t pos_indexwaybefore = 0;
-
-            uint16_t nml_index1before = 0;
-            uint16_t nml_index2before = 0;
-            uint16_t nml_indexwaybefore = 0;
-
-            uint16_t uvc1_index1before = 0;
-            uint16_t uvc1_index2before = 0;
-            uint16_t uvc1_indexwaybefore = 0;
-
-            uint16_t uvc2_index1before = 0;
-            uint16_t uvc2_index2before = 0;
-            uint16_t uvc2_indexwaybefore = 0;
-
-            uint16_t uvc3_index1before = 0;
-            uint16_t uvc3_index2before = 0;
-            uint16_t uvc3_indexwaybefore = 0;
-
-            uint16_t uvc4_index1before = 0;
-            uint16_t uvc4_index2before = 0;
-            uint16_t uvc4_indexwaybefore = 0;
-
-            uint16_t uvc5_index1before = 0;
-            uint16_t uvc5_index2before = 0;
-            uint16_t uvc5_indexwaybefore = 0;
-
-            uint16_t uvc6_index1before = 0;
-            uint16_t uvc6_index2before = 0;
-            uint16_t uvc6_indexwaybefore = 0;
-
-            uint16_t uvc7_index1before = 0;
-            uint16_t uvc7_index2before = 0;
-            uint16_t uvc7_indexwaybefore = 0;
-
-            for (int ijk = 0; ijk < surface->vertexCount; ijk++)
-            {
-
-
-                uint16_t pos_vIndex = 0;
-                uint16_t nml_vIndex = 0;
-                uint16_t uvc1_vIndex = 0;
-                uint16_t uvc2_vIndex = 0;
-                uint16_t uvc3_vIndex = 0;
-                uint16_t uvc4_vIndex = 0;
-                uint16_t uvc5_vIndex = 0;
-                uint16_t uvc6_vIndex = 0;
-                uint16_t uvc7_vIndex = 0;
-
-
-
-                if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0x3) > 0) {
-                    reader->readInt16(&pos_vIndex);
-                }
-                if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0xC) > 0) {
-                    reader->readInt16(&nml_vIndex);
-                }
-                if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0x300) > 0) {
-                    reader->readInt16(&uvc1_vIndex);
-                }
-                if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0xC00) > 0)
-                {
-                    reader->readInt16(&uvc2_vIndex);
-                }
-                if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0x3000) > 0)
-                {
-                    reader->readInt16(&uvc3_vIndex);
-                }
-                if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0xC000) > 0)
-                {
-                    reader->readInt16(&uvc4_vIndex);
-                }
-                if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0x30000) > 0)
-                {
-                    reader->readInt16(&uvc5_vIndex);
-                }
-                if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0xC0000) > 0)
-                {
-                    reader->readInt16(&uvc6_vIndex);
-                }
-                if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0x300000) > 0)
-                {
-                    reader->readInt16(&uvc7_vIndex);
-                }
-                if (ijk == 0) {
-                    pos_indexwaybefore = pos_vIndex;
-                    nml_indexwaybefore = nml_vIndex;
-                    uvc1_indexwaybefore = uvc1_vIndex;
-                    uvc2_indexwaybefore = uvc2_vIndex;
-                    uvc3_indexwaybefore = uvc3_vIndex;
-                    uvc4_indexwaybefore = uvc4_vIndex;
-                    uvc5_indexwaybefore = uvc5_vIndex;
-                    uvc6_indexwaybefore = uvc6_vIndex;
-                    uvc7_indexwaybefore = uvc7_vIndex;
-                }
-                //std::cout << "vertex " << ijk << " position: " <<
-                //    CMDLMap[AssetID].geometry.vertexCoords.data()[vIndex * 3 + 0] << ", " <<
-                //    CMDLMap[AssetID].geometry.vertexCoords.data()[vIndex * 3 + 1] << ", " <<
-                //    CMDLMap[AssetID].geometry.vertexCoords.data()[vIndex * 3 + 2] <<
-                //    std::endl;
-                if (((surface->GXFlags & 0xF8) == 0xA0)) {
-                    if (ijk > 1)
-                    {
-                        if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0x3) > 0)
-                        {
-                            surface->pos_indices.push_back((pos_indexwaybefore));
-                            surface->pos_indices.push_back((pos_index1before));
-                            surface->pos_indices.push_back((pos_vIndex));
-                        }
-                        if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0xC) > 0)
-                        {
-                            surface->nml_indices.push_back((nml_indexwaybefore));
-                            surface->nml_indices.push_back((nml_index1before));
-                            surface->nml_indices.push_back((nml_vIndex));
-                        }
-                        if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0x300) > 0)
-                        {
-                            surface->uvc_indices.push_back((uvc1_indexwaybefore));
-                            surface->uvc_indices.push_back((uvc1_index1before));
-                            surface->uvc_indices.push_back((uvc1_vIndex));
-                        }
-                    }
-                }
-                else if (((surface->GXFlags & 0xF8) == 0x90))
-                {
-                    if (ijk > 1 && (ijk + 1) % 3 == 0) {
-                        if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0x3) > 0)
-                        {
-                            surface->pos_indices.push_back((pos_index1before));
-                            surface->pos_indices.push_back((pos_index2before));
-                            surface->pos_indices.push_back((pos_vIndex));
-                        }
-                        if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0xC) > 0)
-                        {
-                            surface->nml_indices.push_back((nml_index1before));
-                            surface->nml_indices.push_back((nml_index2before));
-                            surface->nml_indices.push_back((nml_vIndex));
-                        }
-                        if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0x300) > 0)
-                        {
-                            surface->uvc_indices.push_back((uvc1_index1before));
-                            surface->uvc_indices.push_back((uvc1_index2before));
-                            surface->uvc_indices.push_back((uvc1_vIndex));
-                        }
-                    }
-                }
-                else if (((surface->GXFlags & 0xF8) == 0x98))
-                {
-                    if (ijk > 1) {
-                        if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0x3) > 0)
-                        {
-                            surface->pos_indices.push_back((pos_index2before));
-                            surface->pos_indices.push_back((pos_index1before));
-                            surface->pos_indices.push_back((pos_vIndex));
-                        }
-                        if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0xC) > 0)
-                        {
-                            surface->nml_indices.push_back((nml_index2before));
-                            surface->nml_indices.push_back((nml_index1before));
-                            surface->nml_indices.push_back((nml_vIndex));
-                        }
-                        if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0x300) > 0)
-                        {
-                            surface->uvc_indices.push_back((uvc1_index2before));
-                            surface->uvc_indices.push_back((uvc1_index1before));
-                            surface->uvc_indices.push_back((uvc1_vIndex));
-                        }
-
-                    }
-                }
-                else
-                {
-                    std::cout << "unsupported primitive" << std::endl;
-                }
-                pos_index2before = pos_index1before;
-                pos_index1before = pos_vIndex;
-                nml_index2before = nml_index1before;
-                nml_index1before = nml_vIndex;
-                uvc1_index2before = uvc1_index1before;
-                uvc1_index1before = uvc1_vIndex;
-                uvc2_index2before = uvc2_index1before;
-                uvc2_index1before = uvc2_vIndex;
-                uvc3_index2before = uvc3_index1before;
-                uvc3_index1before = uvc3_vIndex;
-                uvc4_index2before = uvc4_index1before;
-                uvc4_index1before = uvc4_vIndex;
-                uvc5_index2before = uvc5_index1before;
-                uvc5_index1before = uvc5_vIndex;
-                uvc6_index2before = uvc6_index1before;
-                uvc6_index1before = uvc6_vIndex;
-                uvc7_index2before = uvc7_index1before;
-                uvc7_index1before = uvc7_vIndex;
-
-
-                //if ((materialSet.materials[surface->matIndex].vertexAtributeFlags & 0xC) > 0)
-                //{
-                //    uint16_t vIndex;variable 'pos_vIndex' is being used
-                //    memcpy(&vIndex, &rawFile[subGetLoc], sizeof(vIndex));
-                //    vIndex = _byteswap_ushort(vIndex);
-                //    std::cout << "vertex " << ijk << " normal: " <<
-                //        CMDLMap[AssetID].geometry.normals.data()[vIndex * 3 + 0] << ", " <<
-                //        CMDLMap[AssetID].geometry.normals.data()[vIndex * 3 + 1] << ", " <<
-                //        CMDLMap[AssetID].geometry.normals.data()[vIndex * 3 + 2] <<
-                //        std::endl;
-                //    subGetLoc += sizeof(vIndex);
-                //}
-                //
-                //
-                ////todo: color inputs
-                //
-                //
-                //if ((CMDLMap[AssetID].materialSets.data()[0/*surface->matIndex*/].vertexAtributeFlags & 0x300) > 0)
-                //{
-                //    uint16_t vIndex;
-                //    memcpy(&vIndex, &rawFile[subGetLoc], sizeof(vIndex));
-                //    vIndex = _byteswap_ushort(vIndex);
-                //    std::cout << "vertex " << ijk << " UV: " <<
-                //        CMDLMap[AssetID].geometry.floatUVCoords.data()[vIndex * 2 + 0] << ", " <<
-                //        CMDLMap[AssetID].geometry.floatUVCoords.data()[vIndex * 2 + 1] <<
-                //        std::endl;
-                //    subGetLoc += sizeof(vIndex);
-                //}
-                //if ((CMDLMap[AssetID].materialSets.data()[0/*surface->matIndex*/].vertexAtributeFlags & 0xC00) > 0)
-                //{
-                //    uint16_t vIndex;
-                //    memcpy(&vIndex, &rawFile[subGetLoc], sizeof(vIndex));
-                //    vIndex = _byteswap_ushort(vIndex);
-                //    std::cout << "vertex " << ijk << " UV: " <<
-                //        CMDLMap[AssetID].geometry.floatUVCoords.data()[vIndex * 2 + 0] << ", " <<
-                //        CMDLMap[AssetID].geometry.floatUVCoords.data()[vIndex * 2 + 1] <<
-                //        std::endl;
-                //    subGetLoc += sizeof(vIndex);
-                //}
-                //
-
-
-            }
-
-            //0x3       position
-            //0xC       normal
-            //0x30      color 0
-            //0xC0      color 1
-            //0x300     texture 0
-            //0xC00     texture 1
-            //0x3000    texture 2
-            //0xC000    texture 3
-            //0x30000   texture 4
-            //0xC0000   texture 5
-            //0x30000   texture 6
-
-            if (reader->getloc - surfaceStartLoc + 2 > reader->getSectionSize()) {
-
-                std::cout << __LINE__ << " hit end of display list" << std::endl;
-
-                //reader->toNextSection();
-                break;
-
-            }
-
-            reader->readInt8(&surface->GXFlags);
-
-            if (surface->GXFlags == 0)
-            {
-                std::cout << __LINE__ << " GXFlags hit 0" << std::endl;
-
-                //reader->toNextSection();
-                break;
-            }
-        }
-    }
 
 }
 void loadMREA(std::vector<char> rawFile, PrimeAssetID AssetID)
@@ -1532,9 +1072,8 @@ void loadMREA(std::vector<char> rawFile, PrimeAssetID AssetID)
     reader.sectionAncor = reader.getloc;
     MaterialSet m;
     loadMaterialSet(&reader, &m);
-    //reader.toNextSection();
     MPGeometry geometry;
-    loadGeometry(&reader, &geometry, m, true, true);
+    loadGeometry(&reader, &geometry, m, true, true, true);
 }
 void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
 {
@@ -1921,12 +1460,474 @@ void loadSTRG(std::vector<char> rawFile, PrimeAssetID AssetID)
     }
 
 }
+void loadAttributeArrays(FileReader* reader, CMDL* cmdl)
+{
+    std::cout << "reading attribute data from " << std::hex << reader->getloc << std::dec << std::endl;
+
+    MPGeometry* geometry = &(cmdl->geometry);
+
+    //resize the vector holding the vertex coords based on the size of that section. this will add some extra space because of the 32B padding
+    geometry->vertexCoords.resize(reader->getSectionSize() / (sizeof(float) * 3));
+
+    std::cout << "number of vert coords: " << geometry->vertexCoords.size() << std::endl;
+    for (int i = 0; i < geometry->vertexCoords.size(); i++)
+    {
+        reader->readFloat(&geometry->vertexCoords[i].x);
+        reader->readFloat(&geometry->vertexCoords[i].y);
+        reader->readFloat(&geometry->vertexCoords[i].z);
+
+    }
+
+    reader->toNextSection();
+    if (cmdl->halfPrecisionNormals)
+    {
+        geometry->normals.resize(reader->getSectionSize() / (sizeof(short) * 3));
+    }
+    else
+    {
+        geometry->normals.resize(reader->getSectionSize() / (sizeof(float) * 3));
+
+    }
+
+    std::cout << "number of normal coords: " << geometry->normals.size() << std::endl;
+
+    if (cmdl->halfPrecisionNormals) {
+        uint16_t temp1, temp2, temp3;
+        for (int ijk = 0; ijk < geometry->normals.size(); ijk++)
+        {
+            reader->readInt16(&temp1);
+            reader->readInt16(&temp2);
+            reader->readInt16(&temp3);
+            geometry->normals[ijk].x = temp1 / 0x8000;
+            geometry->normals[ijk].y = temp2 / 0x8000;
+            geometry->normals[ijk].z = temp3 / 0x8000;
+        }
+    }
+    else
+    {
+        for (int ijk = 0; ijk < geometry->normals.size(); ijk++)
+        {
+            reader->readFloat(&geometry->normals[ijk].x);
+            reader->readFloat(&geometry->normals[ijk].y);
+            reader->readFloat(&geometry->normals[ijk].z);
+        }
+    }
+    reader->toNextSection();
+
+    std::cout << std::hex << "[" << reader->getloc << " :: " << reader->getloc << "]" << std::dec << "skipping color data" << std::endl;
+
+    //no need to read color data, it's all empty
+    reader->toNextSection();
+    //std::cout <<__LINE__ << " " << reader->getSectionSize() << std::endl;
+    geometry->floatUVCoords.resize(reader->getSectionSize() / (sizeof(float) * 2));
+    std::cout << "number of float UV coords: " << geometry->floatUVCoords.size() << std::endl;
+
+    for (int ijk = 0; ijk < geometry->floatUVCoords.size(); ijk++)
+    {
+        reader->readFloat(&geometry->floatUVCoords[ijk].x);
+        reader->readFloat(&geometry->floatUVCoords[ijk].y);
+    }
+    reader->toNextSection();
+
+
+
+    geometry->shortUVCoords.resize(reader->getSectionSize() / (sizeof(short) * 2));
+
+    std::cout << "number of short UV coords: " << geometry->shortUVCoords.size() << std::endl;
+
+    for (int ijk = 0; ijk < geometry->shortUVCoords.size(); ijk++)
+    {
+        reader->readInt16((uint16_t*)&geometry->shortUVCoords[ijk].x);
+        reader->readInt16((uint16_t*)&geometry->shortUVCoords[ijk].y);
+    }
+}
+void LoadSurfaceOffsets(FileReader* reader, CMDL* cmdl)
+{
+    MPGeometry* geometry = &(cmdl->geometry);
+
+    std::cout << std::hex << "[" << reader->getloc << " :: " << reader->getloc << "]" << std::dec << "reading header data" << std::endl;
+    //the moment of truth:
+    reader->readInt32(&geometry->surfaceCount);
+    std::cout << std::hex << "[" << (reader->getloc - sizeof(geometry->surfaceCount)) << " :: " << (reader->getloc) << "] surface count:" << geometry->surfaceCount << std::dec << std::endl;
+
+    geometry->surfaceOffsets.resize(geometry->surfaceCount);
+
+    for (int ijk = 0; ijk < geometry->surfaceCount; ijk++)
+    {
+        reader->readInt32(&geometry->surfaceOffsets[ijk]);
+        std::cout << "[" << (reader->getloc - sizeof(uint32_t)) << " :: " << (reader->getloc) << "] surface offset " << ijk << ": " << std::hex << geometry->surfaceOffsets[ijk] << std::dec << std::endl;
+    }
+    geometry->surfaceOffsets.push_back(reader->getSectionSize());
+    geometry->surfaces.resize(geometry->surfaceCount);
+    reader->toNextSection();
+}
+void loadSurfaces(FileReader* reader, CMDL* cmdl)
+{
+    MPGeometry* geometry = &(cmdl->geometry);
+    MaterialSet* materialSet = &(cmdl->materialSets[0]);
+
+    for (int surfaceNum = 0; surfaceNum < geometry->surfaceCount; surfaceNum++)
+    {
+        reader->toNextSection();
+        MPSurface* surface = &geometry->surfaces[surfaceNum];
+        surface->clearAll();
+        int surfaceStartLoc = reader->getloc;
+        for (int i = 0; i < 3; i++)
+        {
+            reader->readFloat(&surface->centerPoint[i]);
+        }
+        std::cout << "center point: " << surface->centerPoint[0] << ", " << surface->centerPoint[1] << ", " << surface->centerPoint[2] << std::endl;
+
+        reader->readInt32(&(surface->matIndex));
+        std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->matIndex)) << " :: " << (reader->getloc) << "] matIndex:" << surface->matIndex << std::dec << std::endl;
+
+        reader->readInt16(&(surface->mantissa));
+        std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->mantissa)) << " :: " << (reader->getloc) << "] mantissa:" << surface->mantissa << std::dec << std::endl;
+
+        reader->readInt16(&(surface->displayListSize));
+        std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->displayListSize)) << " :: " << (reader->getloc) << "] displayListSize:" << surface->displayListSize << std::dec << std::endl;
+
+        reader->readInt32(&(surface->parentModelPointer));
+        std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->parentModelPointer)) << " :: " << (reader->getloc) << "] parentModelPointer:" << surface->parentModelPointer << std::dec << std::endl;
+
+        reader->readInt32(&(surface->nextSurfacePointer));
+        std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->nextSurfacePointer)) << " :: " << (reader->getloc) << "] nextSurfacePointer:" << surface->nextSurfacePointer << std::dec << std::endl;
+
+        reader->readInt32(&(surface->extraDataSize));
+        std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->extraDataSize)) << " :: " << (reader->getloc) << "] extraDataSize:" << surface->extraDataSize << std::dec << std::endl;
+
+
+        for (int ijk = 0; ijk < 3; ijk++)
+        {
+            reader->readFloat(&surface->surfaceNormal[ijk]);
+        }
+        std::cout << "surface normal: " << surface->surfaceNormal[0] << ", " << surface->surfaceNormal[1] << ", " << surface->surfaceNormal[2] << std::endl;
+
+
+
+        reader->getloc += surface->extraDataSize;
+
+        //align get location to 32 bytes before reading primatives
+        reader->seekBoundary32();
+
+        reader->readInt8(&surface->GXFlags);
+        //std::cout << std::hex << "[" << reader->getloc << " :: " << (reader->getloc + sizeof(GXFlags)) << "] GXFlags:" << GXFlags << std::dec << std::endl;
+
+        while (surface->GXFlags > 0)
+        {
+            std::bitset<8> GXFlagBits(surface->GXFlags);
+            std::cout << std::endl;
+            std::cout << GXFlagBits << std::endl;
+            std::cout << "GX_VA_NRM type / size | GX_VA_TEX0 type / size" << std::endl;
+            switch (0x7 & surface->GXFlags) {
+            case 0:
+                std::cout << " GX_NRM_XYZ / GX_F32  |   GX_TEX_ST / GX_F32" << std::endl;
+                break;
+            case 1:
+                std::cout << " GX_NRM_XYZ / GX_S16  |   GX_TEX_ST / GX_F32" << std::endl;
+                break;
+            case 2:
+                std::cout << " GX_NRM_XYZ / GX_S16  |   GX_TEX_ST / GX_S16" << std::endl;
+                break;
+            default:
+                std::cout << "fatal error" << std::endl;
+            }
+            std::cout << "format: ";
+            switch (surface->GXFlags & 0xF8)
+            {
+            case 0x80:
+                std::cout << "Quads" << std::endl;
+                break;
+            case 0x90:
+                std::cout << "Triangles" << std::endl;
+                break;
+            case 0x98:
+                std::cout << "Triangle Strip" << std::endl;
+                break;
+            case 0xA0:
+                std::cout << "Triangle Fan" << std::endl;
+                break;
+            }
+            reader->readInt16(&surface->vertexCount);
+            std::cout << std::hex << "[" << (reader->getloc - sizeof(surface->vertexCount)) << " :: " << (reader->getloc) << "] vertex count:" << std::dec << surface->vertexCount << std::dec << std::endl;
+
+            uint16_t pos_index1before = 0;
+            uint16_t pos_index2before = 0;
+            uint16_t pos_indexwaybefore = 0;
+
+            uint16_t nml_index1before = 0;
+            uint16_t nml_index2before = 0;
+            uint16_t nml_indexwaybefore = 0;
+
+            uint16_t uvc1_index1before = 0;
+            uint16_t uvc1_index2before = 0;
+            uint16_t uvc1_indexwaybefore = 0;
+
+            uint16_t uvc2_index1before = 0;
+            uint16_t uvc2_index2before = 0;
+            uint16_t uvc2_indexwaybefore = 0;
+
+            uint16_t uvc3_index1before = 0;
+            uint16_t uvc3_index2before = 0;
+            uint16_t uvc3_indexwaybefore = 0;
+
+            uint16_t uvc4_index1before = 0;
+            uint16_t uvc4_index2before = 0;
+            uint16_t uvc4_indexwaybefore = 0;
+
+            uint16_t uvc5_index1before = 0;
+            uint16_t uvc5_index2before = 0;
+            uint16_t uvc5_indexwaybefore = 0;
+
+            uint16_t uvc6_index1before = 0;
+            uint16_t uvc6_index2before = 0;
+            uint16_t uvc6_indexwaybefore = 0;
+
+            uint16_t uvc7_index1before = 0;
+            uint16_t uvc7_index2before = 0;
+            uint16_t uvc7_indexwaybefore = 0;
+
+            for (int ijk = 0; ijk < surface->vertexCount; ijk++)
+            {
+
+
+                uint16_t pos_vIndex = 0;
+                uint16_t nml_vIndex = 0;
+                uint16_t uvc1_vIndex = 0;
+                uint16_t uvc2_vIndex = 0;
+                uint16_t uvc3_vIndex = 0;
+                uint16_t uvc4_vIndex = 0;
+                uint16_t uvc5_vIndex = 0;
+                uint16_t uvc6_vIndex = 0;
+                uint16_t uvc7_vIndex = 0;
+
+
+
+                if ((materialSet->materials[surface->matIndex].vertexAtributeFlags & 0x3) > 0) {
+                    reader->readInt16(&pos_vIndex);
+                }
+                if ((materialSet->materials[surface->matIndex].vertexAtributeFlags & 0xC) > 0) {
+                    reader->readInt16(&nml_vIndex);
+                }
+                if ((materialSet->materials[surface->matIndex].vertexAtributeFlags & 0x300) > 0) {
+                    reader->readInt16(&uvc1_vIndex);
+                }
+                if ((materialSet->materials[surface->matIndex].vertexAtributeFlags & 0xC00) > 0)
+                {
+                    reader->readInt16(&uvc2_vIndex);
+                }
+                if ((materialSet->materials[surface->matIndex].vertexAtributeFlags & 0x3000) > 0)
+                {
+                    reader->readInt16(&uvc3_vIndex);
+                }
+                if ((materialSet->materials[surface->matIndex].vertexAtributeFlags & 0xC000) > 0)
+                {
+                    reader->readInt16(&uvc4_vIndex);
+                }
+                if ((materialSet->materials[surface->matIndex].vertexAtributeFlags & 0x30000) > 0)
+                {
+                    reader->readInt16(&uvc5_vIndex);
+                }
+                if ((materialSet->materials[surface->matIndex].vertexAtributeFlags & 0xC0000) > 0)
+                {
+                    reader->readInt16(&uvc6_vIndex);
+                }
+                if ((materialSet->materials[surface->matIndex].vertexAtributeFlags & 0x300000) > 0)
+                {
+                    reader->readInt16(&uvc7_vIndex);
+                }
+                if (ijk == 0) {
+                    pos_indexwaybefore = pos_vIndex;
+                    nml_indexwaybefore = nml_vIndex;
+                    uvc1_indexwaybefore = uvc1_vIndex;
+                    uvc2_indexwaybefore = uvc2_vIndex;
+                    uvc3_indexwaybefore = uvc3_vIndex;
+                    uvc4_indexwaybefore = uvc4_vIndex;
+                    uvc5_indexwaybefore = uvc5_vIndex;
+                    uvc6_indexwaybefore = uvc6_vIndex;
+                    uvc7_indexwaybefore = uvc7_vIndex;
+                }
+                //std::cout << "vertex " << ijk << " position: " <<
+                //    CMDLMap[AssetID].geometry.vertexCoords.data()[vIndex * 3 + 0] << ", " <<
+                //    CMDLMap[AssetID].geometry.vertexCoords.data()[vIndex * 3 + 1] << ", " <<
+                //    CMDLMap[AssetID].geometry.vertexCoords.data()[vIndex * 3 + 2] <<
+                //    std::endl;
+                if (((surface->GXFlags & 0xF8) == 0xA0)) {
+                    if (ijk > 1)
+                    {
+                        if ((materialSet->materials[surface->matIndex].vertexAtributeFlags & 0x3) > 0)
+                        {
+                            surface->pos_indices.push_back((pos_indexwaybefore));
+                            surface->pos_indices.push_back((pos_index1before));
+                            surface->pos_indices.push_back((pos_vIndex));
+                        }
+                        if ((materialSet->materials[surface->matIndex].vertexAtributeFlags & 0xC) > 0)
+                        {
+                            surface->nml_indices.push_back((nml_indexwaybefore));
+                            surface->nml_indices.push_back((nml_index1before));
+                            surface->nml_indices.push_back((nml_vIndex));
+                        }
+                        if ((materialSet->materials[surface->matIndex].vertexAtributeFlags & 0x300) > 0)
+                        {
+                            surface->uvc_indices.push_back((uvc1_indexwaybefore));
+                            surface->uvc_indices.push_back((uvc1_index1before));
+                            surface->uvc_indices.push_back((uvc1_vIndex));
+                        }
+                    }
+                }
+                else if (((surface->GXFlags & 0xF8) == 0x90))
+                {
+                    if (ijk > 1 && (ijk + 1) % 3 == 0) {
+                        if ((materialSet->materials[surface->matIndex].vertexAtributeFlags & 0x3) > 0)
+                        {
+                            surface->pos_indices.push_back((pos_index1before));
+                            surface->pos_indices.push_back((pos_index2before));
+                            surface->pos_indices.push_back((pos_vIndex));
+                        }
+                        if ((materialSet->materials[surface->matIndex].vertexAtributeFlags & 0xC) > 0)
+                        {
+                            surface->nml_indices.push_back((nml_index1before));
+                            surface->nml_indices.push_back((nml_index2before));
+                            surface->nml_indices.push_back((nml_vIndex));
+                        }
+                        if ((materialSet->materials[surface->matIndex].vertexAtributeFlags & 0x300) > 0)
+                        {
+                            surface->uvc_indices.push_back((uvc1_index1before));
+                            surface->uvc_indices.push_back((uvc1_index2before));
+                            surface->uvc_indices.push_back((uvc1_vIndex));
+                        }
+                    }
+                }
+                else if (((surface->GXFlags & 0xF8) == 0x98))
+                {
+                    if (ijk > 1) {
+                        if ((materialSet->materials[surface->matIndex].vertexAtributeFlags & 0x3) > 0)
+                        {
+                            surface->pos_indices.push_back((pos_index2before));
+                            surface->pos_indices.push_back((pos_index1before));
+                            surface->pos_indices.push_back((pos_vIndex));
+                        }
+                        if ((materialSet->materials[surface->matIndex].vertexAtributeFlags & 0xC) > 0)
+                        {
+                            surface->nml_indices.push_back((nml_index2before));
+                            surface->nml_indices.push_back((nml_index1before));
+                            surface->nml_indices.push_back((nml_vIndex));
+                        }
+                        if ((materialSet->materials[surface->matIndex].vertexAtributeFlags & 0x300) > 0)
+                        {
+                            surface->uvc_indices.push_back((uvc1_index2before));
+                            surface->uvc_indices.push_back((uvc1_index1before));
+                            surface->uvc_indices.push_back((uvc1_vIndex));
+                        }
+
+                    }
+                }
+                else
+                {
+                    std::cout << "unsupported primitive" << std::endl;
+                }
+                pos_index2before = pos_index1before;
+                pos_index1before = pos_vIndex;
+                nml_index2before = nml_index1before;
+                nml_index1before = nml_vIndex;
+                uvc1_index2before = uvc1_index1before;
+                uvc1_index1before = uvc1_vIndex;
+                uvc2_index2before = uvc2_index1before;
+                uvc2_index1before = uvc2_vIndex;
+                uvc3_index2before = uvc3_index1before;
+                uvc3_index1before = uvc3_vIndex;
+                uvc4_index2before = uvc4_index1before;
+                uvc4_index1before = uvc4_vIndex;
+                uvc5_index2before = uvc5_index1before;
+                uvc5_index1before = uvc5_vIndex;
+                uvc6_index2before = uvc6_index1before;
+                uvc6_index1before = uvc6_vIndex;
+                uvc7_index2before = uvc7_index1before;
+                uvc7_index1before = uvc7_vIndex;
+
+
+                //if ((materialSet->materials[surface->matIndex].vertexAtributeFlags & 0xC) > 0)
+                //{
+                //    uint16_t vIndex;variable 'pos_vIndex' is being used
+                //    memcpy(&vIndex, &rawFile[subGetLoc], sizeof(vIndex));
+                //    vIndex = _byteswap_ushort(vIndex);
+                //    std::cout << "vertex " << ijk << " normal: " <<
+                //        CMDLMap[AssetID].geometry.normals.data()[vIndex * 3 + 0] << ", " <<
+                //        CMDLMap[AssetID].geometry.normals.data()[vIndex * 3 + 1] << ", " <<
+                //        CMDLMap[AssetID].geometry.normals.data()[vIndex * 3 + 2] <<
+                //        std::endl;
+                //    subGetLoc += sizeof(vIndex);
+                //}
+                //
+                //
+                ////todo: color inputs
+                //
+                //
+                //if ((CMDLMap[AssetID].materialSets.data()[0/*surface->matIndex*/].vertexAtributeFlags & 0x300) > 0)
+                //{
+                //    uint16_t vIndex;
+                //    memcpy(&vIndex, &rawFile[subGetLoc], sizeof(vIndex));
+                //    vIndex = _byteswap_ushort(vIndex);
+                //    std::cout << "vertex " << ijk << " UV: " <<
+                //        CMDLMap[AssetID].geometry.floatUVCoords.data()[vIndex * 2 + 0] << ", " <<
+                //        CMDLMap[AssetID].geometry.floatUVCoords.data()[vIndex * 2 + 1] <<
+                //        std::endl;
+                //    subGetLoc += sizeof(vIndex);
+                //}
+                //if ((CMDLMap[AssetID].materialSets.data()[0/*surface->matIndex*/].vertexAtributeFlags & 0xC00) > 0)
+                //{
+                //    uint16_t vIndex;
+                //    memcpy(&vIndex, &rawFile[subGetLoc], sizeof(vIndex));
+                //    vIndex = _byteswap_ushort(vIndex);
+                //    std::cout << "vertex " << ijk << " UV: " <<
+                //        CMDLMap[AssetID].geometry.floatUVCoords.data()[vIndex * 2 + 0] << ", " <<
+                //        CMDLMap[AssetID].geometry.floatUVCoords.data()[vIndex * 2 + 1] <<
+                //        std::endl;
+                //    subGetLoc += sizeof(vIndex);
+                //}
+                //
+
+
+            }
+
+            //0x3       position
+            //0xC       normal
+            //0x30      color 0
+            //0xC0      color 1
+            //0x300     texture 0
+            //0xC00     texture 1
+            //0x3000    texture 2
+            //0xC000    texture 3
+            //0x30000   texture 4
+            //0xC0000   texture 5
+            //0x30000   texture 6
+
+            if (reader->getloc - surfaceStartLoc + 2 > reader->getSectionSize()) {
+
+                std::cout << __LINE__ << " hit end of display list" << std::endl;
+
+                //reader->toNextSection();
+                break;
+
+            }
+
+            reader->readInt8(&surface->GXFlags);
+
+            if (surface->GXFlags == 0)
+            {
+                std::cout << __LINE__ << " GXFlags hit 0" << std::endl;
+
+                //reader->toNextSection();
+                break;
+            }
+        }
+    }
+}
 void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
 {
     CMDLMap[AssetID].magic = 0xBAD0DADA;
     CMDLMap[AssetID].geometry.shortUVCoords.reserve(9999);
     CMDLMap[AssetID].geometry.vertexCoords.reserve(9999);
-    CMDLMap[AssetID].geometry.surfaces.reserve(9999);
 
 
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
@@ -1945,8 +1946,8 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
     std::cout << "\tIndicates the model is skinned: " << ((CMDLMap[AssetID].flags & 0x1) > 0 ? "1" : "0") << std::endl;
     std::cout << "\tToggle short normals:           " << ((CMDLMap[AssetID].flags & 0x2) > 0 ? "1" : "0") << std::endl;
     std::cout << "\tEnable short UV array:          " << ((CMDLMap[AssetID].flags & 0x4) > 0 ? "1" : "0") << std::endl;
-    bool halfPrecisionNormals = ((CMDLMap[AssetID].flags & 0x2) > 0);
-    bool halfPrecisionUVs = ((CMDLMap[AssetID].flags & 0x4) > 0);
+    CMDLMap[AssetID].halfPrecisionNormals = ((CMDLMap[AssetID].flags & 0x2) > 0);
+    CMDLMap[AssetID].halfPrecisionUVs = ((CMDLMap[AssetID].flags & 0x4) > 0);
 
     std::cout << std::hex << "[" << reader.getloc << " :: " << (reader.getloc + sizeof(float) * 6) << "] Model Axis-Aligned Bounding Box:";
     for (int ijk = 0; ijk < 6; ijk++)
@@ -1986,9 +1987,16 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
     {
         loadMaterialSet(&reader, &CMDLMap[AssetID].materialSets[i]);
     }
-    //reader.toNextSection();
-    std::cout << "reading geometry data from " << std::hex << reader.getloc << std::dec << std::endl;
-    loadGeometry(&reader, &CMDLMap[AssetID].geometry, CMDLMap[AssetID].materialSets[0], halfPrecisionNormals, halfPrecisionUVs);
+    
+
+    
+    loadAttributeArrays(&reader, &CMDLMap[AssetID]);
+    LoadSurfaceOffsets(&reader, &CMDLMap[AssetID]);
+    CMDLMap[AssetID].geometry.surfaces.reserve(CMDLMap[AssetID].geometry.surfaceCount);
+    loadSurfaces(&reader, &CMDLMap[AssetID]);
+    //std::cout << "reading geometry data from " << std::hex << reader.getloc << std::dec << std::endl;
+    
+    //loadGeometry(&reader, &CMDLMap[AssetID].geometry, CMDLMap[AssetID].materialSets[0], CMDLMap[AssetID].halfPrecisionNormals, CMDLMap[AssetID].halfPrecisionUVs, (CMDLMap[AssetID].flags & 0x4) > 0);
 
 
 
