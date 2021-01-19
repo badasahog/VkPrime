@@ -81,34 +81,34 @@ public:
 		getloc += 32 - getloc % 32;
 		
 	}
-	void readInt8(uint8_t* _Inout_ loc)
+	void readInt8(uint8_t* _Out_ loc)
 	{
 		//_cpy8(loc, &src[getloc]);
 		memcpy(loc, &src[getloc], 1);
 		getloc += 1;
 	}
-	void readInt16(int16_t* _Inout_ loc)
+	void readInt16(int16_t* _Out_ loc)
 	{
 		readInt16((uint16_t*)loc);
 	}
-	void readInt16(uint16_t* _Inout_ loc)
+	void readInt16(uint16_t* _Out_ loc)
 	{
 		_cpy16(loc, &src[getloc]);
 		getloc += 2;
 	}
 	
-	void readInt32(uint32_t* _Inout_ loc)
+	void readInt32(uint32_t* _Out_ loc)
 	{
 
 		_cpy32(loc, &src[getloc]);
 		getloc += 4;
 	}
-	void readInt64(uint64_t* _Inout_ loc)
+	void readInt64(uint64_t* _Out_ loc)
 	{
 		_cpy64(loc, &src[getloc]);
 		getloc += 8;
 	}
-	void readFloat(float* _Inout_ loc)
+	void readFloat(float* _Out_ loc)
 	{
 		_cpyFloat(loc, &src[getloc]);
 		getloc += 4;

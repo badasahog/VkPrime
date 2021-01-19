@@ -218,7 +218,13 @@ struct CMDL {
     bool halfPrecisionNormals;
     bool halfPrecisionUVs;
 };
-
+struct WorldModel
+{
+    uint32_t visorFlags;
+    float worldModelTransofrm[12];
+    float worldModelBoundingBox[6];
+    MPGeometry geometry;
+};
 struct MREA {
     uint32_t magic;
     uint32_t version;
@@ -234,6 +240,8 @@ struct MREA {
     uint32_t pathSection;
     uint32_t areaOctreeSection;
     std::vector<uint32_t> dataSectionSizes;
+    std::vector<WorldModel> worldModels;
+    MaterialSet materialSet;
 };
 struct DXT1
 {
@@ -270,6 +278,10 @@ void        loadMREA(std::vector<char> rawFile, PrimeAssetID AssetID);
 void        loadTXTR(std::vector<char> rawFile, PrimeAssetID AssetID);
 void loadPak(std::string filename);
 
+
+void loadAttributeArrays(FileReader* reader, MPGeometry* geometry, bool halfPrecisionNormals);
+void LoadSurfaceOffsets(FileReader* reader, MPGeometry* geometry);
+void loadSurfaces(FileReader* reader, MPGeometry* geometry, MaterialSet* materialSet);
 
 std::vector<char> findAsset(PrimeAssetID assetID, std::string pakFile) {
     std::ifstream f("prime/" + pakFile, std::ios::binary);
@@ -662,7 +674,7 @@ void loadMaterialSet(FileReader* reader, MaterialSet* materialSet)
         std::cout << "\tunused, never set:                                 " << ((flags & 0x8000) > 0 ? "on" : "off") << std::endl;
         uint32_t TC;
         reader->readInt32(&TC);
-        std::cout << "[" << std::hex << reader->getloc << std::dec << "] "<< "Texture Count: " << TC << std::endl;
+        std::cout << "[" << std::hex << reader->getloc << std::dec << "] " << "Texture Count: " << TC << std::endl;
 
         while (TC > 120) {}//safety to prevent crahes
         materialSet->materials[ijk].textureFileIndices.resize(TC);
@@ -1001,12 +1013,6 @@ void loadMaterialSet(FileReader* reader, MaterialSet* materialSet)
     //subGetLoc = upperGetLoc;
     reader->toNextSection();
 }
-void loadGeometry(FileReader* reader, MPGeometry* geometry, MaterialSet materialSet, bool halfPrecisionNormals, bool halfPrecisionUVs, bool shortUVs)
-{
-
-    
-
-}
 void loadMREA(std::vector<char> rawFile, PrimeAssetID AssetID)
 {
 
@@ -1070,10 +1076,41 @@ void loadMREA(std::vector<char> rawFile, PrimeAssetID AssetID)
     }
     reader.seekBoundary32();
     reader.sectionAncor = reader.getloc;
-    MaterialSet m;
-    loadMaterialSet(&reader, &m);
-    MPGeometry geometry;
-    loadGeometry(&reader, &geometry, m, true, true, true);
+    MREAMap[AssetID].worldModels.resize(MREAMap[AssetID].worldModelCount);
+    loadMaterialSet(&reader, &MREAMap[AssetID].materialSet);
+    //for (int x = 0; x < MREAMap[AssetID].worldModelCount; x++)
+    for (int x = 0; x < 1; x++)
+    {
+
+        uint32_t visorFlags;
+        reader.readInt32(&visorFlags);
+        std::cout << "visor flags:" << std::endl;
+        std::cout << "\tDisable rendering in combat/scan visor: " << ((visorFlags & 0x2) > 0 ? "on" : "off") << std::endl;
+        std::cout << "\tDisable rendering in Thermal Visor:     " << ((visorFlags & 0x4) > 0 ? "on" : "off") << std::endl;
+        std::cout << "\tDisable rendering in X-Ray Visor:       " << ((visorFlags & 0x8) > 0 ? "on" : "off") << std::endl;
+        std::cout << "\tThermal heat level:                     " << ((visorFlags & 0x30)) << std::endl;
+        std::cout << "world model transform: " << std::endl;
+        float areaTransform[12];
+        for (int i = 0; i < 12; i++) {
+            reader.readFloat(&areaTransform[i]);
+        }
+        std::cout << "| " << areaTransform[0] << "\t" << areaTransform[1] << "\t" << areaTransform[2] << "\t" << areaTransform << "\t|" << std::endl;
+        std::cout << "| " << areaTransform[4] << "\t" << areaTransform[5] << "\t" << areaTransform[6] << "\t" << areaTransform << "\t|" << std::endl;
+        std::cout << "| " << areaTransform[8] << "\t" << areaTransform[9] << "\t" << areaTransform[10] << "\t" << areaTransform << "\t|" << std::endl;
+
+        std::cout << "World Model Bounding Box: " << std::endl;
+        float worldModelBoundingBox[6];
+        for (int i = 0; i < 6; i++) {
+            reader.readFloat(&worldModelBoundingBox[i]);
+        }
+        std::cout << "coords: " << worldModelBoundingBox[0] << ", " << worldModelBoundingBox[1] << ", " << worldModelBoundingBox[2] << std::endl;
+        std::cout << "dimensions: " << worldModelBoundingBox[3] << ", " << worldModelBoundingBox[4] << ", " << worldModelBoundingBox[5] << std::endl;
+        reader.toNextSection();
+
+        loadAttributeArrays(&reader, &MREAMap[AssetID].worldModels[x].geometry, true);
+        LoadSurfaceOffsets(&reader, &MREAMap[AssetID].worldModels[x].geometry);
+        loadSurfaces(&reader, &MREAMap[AssetID].worldModels[x].geometry, &MREAMap[AssetID].materialSet);
+    }
 }
 void loadMLVL(std::vector<char> rawFile, PrimeAssetID AssetID)
 {
@@ -1460,11 +1497,10 @@ void loadSTRG(std::vector<char> rawFile, PrimeAssetID AssetID)
     }
 
 }
-void loadAttributeArrays(FileReader* reader, CMDL* cmdl)
+void loadAttributeArrays(FileReader* reader, MPGeometry* geometry, bool halfPrecisionNormals)
 {
     std::cout << "reading attribute data from " << std::hex << reader->getloc << std::dec << std::endl;
 
-    MPGeometry* geometry = &(cmdl->geometry);
 
     //resize the vector holding the vertex coords based on the size of that section. this will add some extra space because of the 32B padding
     geometry->vertexCoords.resize(reader->getSectionSize() / (sizeof(float) * 3));
@@ -1479,7 +1515,7 @@ void loadAttributeArrays(FileReader* reader, CMDL* cmdl)
     }
 
     reader->toNextSection();
-    if (cmdl->halfPrecisionNormals)
+    if (halfPrecisionNormals)
     {
         geometry->normals.resize(reader->getSectionSize() / (sizeof(short) * 3));
     }
@@ -1491,7 +1527,7 @@ void loadAttributeArrays(FileReader* reader, CMDL* cmdl)
 
     std::cout << "number of normal coords: " << geometry->normals.size() << std::endl;
 
-    if (cmdl->halfPrecisionNormals) {
+    if (halfPrecisionNormals) {
         uint16_t temp1, temp2, temp3;
         for (int ijk = 0; ijk < geometry->normals.size(); ijk++)
         {
@@ -1541,10 +1577,8 @@ void loadAttributeArrays(FileReader* reader, CMDL* cmdl)
         reader->readInt16((uint16_t*)&geometry->shortUVCoords[ijk].y);
     }
 }
-void LoadSurfaceOffsets(FileReader* reader, CMDL* cmdl)
+void LoadSurfaceOffsets(FileReader* reader, MPGeometry* geometry)
 {
-    MPGeometry* geometry = &(cmdl->geometry);
-
     std::cout << std::hex << "[" << reader->getloc << " :: " << reader->getloc << "]" << std::dec << "reading header data" << std::endl;
     //the moment of truth:
     reader->readInt32(&geometry->surfaceCount);
@@ -1561,11 +1595,8 @@ void LoadSurfaceOffsets(FileReader* reader, CMDL* cmdl)
     geometry->surfaces.resize(geometry->surfaceCount);
     reader->toNextSection();
 }
-void loadSurfaces(FileReader* reader, CMDL* cmdl)
+void loadSurfaces(FileReader* reader, MPGeometry* geometry, MaterialSet* materialSet)
 {
-    MPGeometry* geometry = &(cmdl->geometry);
-    MaterialSet* materialSet = &(cmdl->materialSets[0]);
-
     for (int surfaceNum = 0; surfaceNum < geometry->surfaceCount; surfaceNum++)
     {
         reader->toNextSection();
@@ -1905,8 +1936,6 @@ void loadSurfaces(FileReader* reader, CMDL* cmdl)
             if (reader->getloc - surfaceStartLoc + 2 > reader->getSectionSize()) {
 
                 std::cout << __LINE__ << " hit end of display list" << std::endl;
-
-                //reader->toNextSection();
                 break;
 
             }
@@ -1916,8 +1945,6 @@ void loadSurfaces(FileReader* reader, CMDL* cmdl)
             if (surface->GXFlags == 0)
             {
                 std::cout << __LINE__ << " GXFlags hit 0" << std::endl;
-
-                //reader->toNextSection();
                 break;
             }
         }
@@ -1987,16 +2014,14 @@ void loadCMDL(std::vector<char> rawFile, PrimeAssetID AssetID)
     {
         loadMaterialSet(&reader, &CMDLMap[AssetID].materialSets[i]);
     }
-    
 
-    
-    loadAttributeArrays(&reader, &CMDLMap[AssetID]);
-    LoadSurfaceOffsets(&reader, &CMDLMap[AssetID]);
+
+
+    loadAttributeArrays(&reader, &CMDLMap[AssetID].geometry, CMDLMap[AssetID].halfPrecisionNormals);
+    LoadSurfaceOffsets(&reader, &CMDLMap[AssetID].geometry);
     CMDLMap[AssetID].geometry.surfaces.reserve(CMDLMap[AssetID].geometry.surfaceCount);
-    loadSurfaces(&reader, &CMDLMap[AssetID]);
-    //std::cout << "reading geometry data from " << std::hex << reader.getloc << std::dec << std::endl;
-    
-    //loadGeometry(&reader, &CMDLMap[AssetID].geometry, CMDLMap[AssetID].materialSets[0], CMDLMap[AssetID].halfPrecisionNormals, CMDLMap[AssetID].halfPrecisionUVs, (CMDLMap[AssetID].flags & 0x4) > 0);
+    loadSurfaces(&reader, &CMDLMap[AssetID].geometry, &CMDLMap[AssetID].materialSets[0]);
+
 
 
 

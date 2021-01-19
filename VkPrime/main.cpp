@@ -250,6 +250,7 @@ private:
         VkDeviceMemory textureImageMemory;
         VkImageView textureImageView;
         VkSampler textureSampler;
+        PrimeAssetID TXTRID;
     };
 
     std::vector<imageStuff> imageStuffs;
@@ -955,15 +956,17 @@ private:
 
     void createTextureImage() {
 
-        imageStuffs.resize(CMDLMap[tempCMDLID].materialSets[0].textureCount);
+        //imageStuffs.resize(CMDLMap[tempCMDLID].materialSets[0].textureCount);
         for (int x = 0; x < imageStuffs.size(); x++)
         {
             std::cout <<"line ["<< __LINE__ << "]: " << x << std::endl;
 
-            unsigned char* pixels = (TXTRMap[CMDLMap[tempCMDLID].materialSets[0].textureFileIDs[x]].PCpixels.data());
+            //unsigned char* pixels = (TXTRMap[CMDLMap[tempCMDLID].materialSets[0].textureFileIDs[x]].PCpixels.data());
+            unsigned char* pixels = (TXTRMap[imageStuffs[x].TXTRID].PCpixels.data());
             //unsigned char* pixels = (TXTRMap[CMDLMap[tempCMDLID].materialSets[0].textureFileIDs[x]].PCpixels.data());
 
-            int texWidth = TXTRMap[CMDLMap[tempCMDLID].materialSets[0].textureFileIDs[x]].imageWidth, texHeight = TXTRMap[CMDLMap[tempCMDLID].materialSets[0].textureFileIDs[x]].imageHeight, texChannels;
+            //int texWidth = TXTRMap[CMDLMap[tempCMDLID].materialSets[0].textureFileIDs[x]].imageWidth, texHeight = TXTRMap[CMDLMap[tempCMDLID].materialSets[0].textureFileIDs[x]].imageHeight, texChannels;
+            int texWidth = TXTRMap[imageStuffs[x].TXTRID].imageWidth, texHeight = TXTRMap[imageStuffs[x].TXTRID].imageHeight, texChannels;
 
             VkDeviceSize imageSize = texWidth * texHeight * 4;
 
@@ -1257,6 +1260,42 @@ private:
 
         endSingleTimeCommands(commandBuffer);
     }
+    void pushToScene(MPGeometry* geometry, MaterialSet* materialSet)
+    {
+        Mesh m;
+        int a = 0;
+        m.startIndex = indices.size();
+        m.vertOffset = vertices.size();
+        for (int i = 0; i < geometry->surfaces.size(); i++)
+        {
+            for (int j = 0; j < geometry->surfaces[i].pos_indices.size(); j++)
+            {
+                Vertex v;
+                v.pos = geometry->vertexCoords[geometry->surfaces[i].pos_indices[j]];
+
+                v.texCoord = (
+                    geometry->floatUVCoords.size() == 0
+                    ?
+                    glm::vec2(255, 255)
+                    :
+                    glm::vec2(255, 255)//(mrea->geometry.floatUVCoords[mrea->geometry.surfaces[i].uvc_indices[j]])
+                    );
+                v.color = glm::vec3(0, 0, 0);
+                v.textureIndex = materialSet->materials[geometry->surfaces[i].matIndex].textureFileIndices[0];
+                m.vertices.push_back(v);
+                m.indices.push_back(a);
+                a++;
+            }
+        }
+        indices.insert(indices.end(), m.indices.begin(), m.indices.end());
+        vertices.insert(vertices.end(), m.vertices.begin(), m.vertices.end());
+
+        m.num_indices = indices.size() - m.startIndex;
+
+
+
+        objects.push_back(m);
+    }
     void pushToScene(CMDL* cmdl)
     {
         Mesh m;
@@ -1393,14 +1432,15 @@ private:
 
 
         //MLVL mlvl = *loadMLVL(0x83F6FF6F, "Metroid2.pak");
-        //MREA area = *loadMREA(0x3E6B2BB7, "Metroid2.pak");
-
+        MREA area = *loadMREA(0x3E6B2BB7, "Metroid2.pak");
         tempCMDLID = 0x729EA8BA;// mlvl.defaultSkyboxID;
-        CMDL cmdl = *loadCMDL(tempCMDLID, "Metroid2.pak");
-        imageStuffs.resize(cmdl.materialSets[0].textureCount);
-        for(int i = 0;i<cmdl.materialSets[0].textureCount;i++)
-            loadTXTR(cmdl.materialSets[0].textureFileIDs[i], "Metroid2.pak");
-
+        //CMDL cmdl = *loadCMDL(tempCMDLID, "Metroid2.pak");
+        //imageStuffs.resize(cmdl.materialSets[0].textureCount + area.materialSet.textureCount);
+        imageStuffs.resize(area.materialSet.textureCount);
+        //for(int i = 0;i<cmdl.materialSets[0].textureCount;i++)
+        //    loadTXTR(cmdl.materialSets[0].textureFileIDs[i], "Metroid2.pak");
+        for(int i = 0; i < area.materialSet.textureCount;i++)
+            loadTXTR(area.materialSet.textureFileIDs[i], "Metroid2.pak");
 
         //loadSTRG(mlvl.worldNameID,"Metroid2.pak");
         //
@@ -1408,7 +1448,9 @@ private:
         //{
         //    loadSTRG(mlvl.areaArray[i].areaNameID,"Metroid2.pak");
         //}
-        pushToScene(&cmdl);
+        //pushToScene(&cmdl);
+        for(int i = 0; i < area.worldModels.size();i++)
+            pushToScene(&area.worldModels[i].geometry, &area.materialSet);
     }
 
     void createVertexBuffer() {
