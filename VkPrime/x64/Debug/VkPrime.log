@@ -127,9 +127,7 @@ C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1293,1): warning C4267: 
 C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1303,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
 C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1304,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
 C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1329,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
-C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1442,26): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1440,24): warning C4018: '<': signed/unsigned mismatch
 C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\main.cpp(1569,1): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
 C:\Users\yair\Documents\GitHub\VkPrime\VkPrime\PrimeAssimp.hpp(420): warning C4715: 'findAsset': not all control paths return a value
-x64\Debug\FileReader.obj : warning LNK4042: object specified more than once; extras ignored
-LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
   VkPrime.vcxproj -> C:\Users\yair\Documents\GitHub\VkPrime\x64\Debug\VkPrime.exe
